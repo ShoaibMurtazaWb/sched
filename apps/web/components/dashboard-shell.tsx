@@ -26,6 +26,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Logo } from "@/components/logo";
 import { api, type CurrentUser } from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
+import { useScrollLock } from "@/lib/use-scroll-lock";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -75,18 +76,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   // Prevent background page scrolling while the mobile drawer is open
-  useEffect(() => {
-    if (isMobileMenuOpen) {
-      const originalOverflow = document.body.style.overflow;
-      const originalTouchAction = document.body.style.touchAction;
-      document.body.style.overflow = "hidden";
-      document.body.style.touchAction = "none";
-      return () => {
-        document.body.style.overflow = originalOverflow;
-        document.body.style.touchAction = originalTouchAction;
-      };
-    }
-  }, [isMobileMenuOpen]);
+  useScrollLock(isMobileMenuOpen);
 
   // Touch/swipe-to-close handlers for mobile drawer
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -350,7 +340,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Navigation Items (Left-aligned, clean vertical rhythm, NO Create button) */}
-          <div className="flex-1 overflow-y-auto px-3.5 py-4 space-y-1.5">
+          <div className="flex-1 overflow-y-auto overscroll-contain px-3.5 py-4 space-y-1.5">
             {mainNavItems.map((item) => {
               const Icon = item.icon;
               return (

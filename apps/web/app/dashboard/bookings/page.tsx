@@ -24,6 +24,7 @@ import { toast } from "@/components/ui/toast";
 import { api, type CurrentUser } from "@/lib/api";
 import { ApiError, formatApiError } from "@/lib/api-error";
 import { BookingDetailDrawer } from "@/components/booking-detail-drawer";
+import { useScrollLock } from "@/lib/use-scroll-lock";
 import type { BookingResponse, TimeSlot, RescheduleBookingBody } from "@sched/api-contract";
 
 type TabStatus = "upcoming" | "past" | "cancelled";
@@ -72,6 +73,9 @@ export default function BookingsPage() {
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isCopiedLink, setIsCopiedLink] = useState(false);
+
+  // Lock background scroll when any booking modal is open
+  useScrollLock(!!(cancelModalBooking || deleteModalBooking || rescheduleModalBooking));
 
   const loadAllBookings = async () => {
     setIsLoading(true);
@@ -370,13 +374,9 @@ export default function BookingsPage() {
           </button>
         </div>
 
-        {/* Main 2-Column Responsive Layout with Slide-in Drawer */}
-        <div className="flex flex-col lg:flex-row items-start gap-6 relative">
-          <div
-            className={`w-full transition-all duration-300 ${
-              isDrawerOpen && selectedBooking ? "lg:max-w-[calc(100%-500px)]" : "w-full"
-            }`}
-          >
+        {/* Main Content Layout with Slide-in Drawer */}
+        <div className="w-full relative">
+          <div className="w-full">
             {/* Content List */}
             {isLoading ? (
               <div className="space-y-3">
@@ -533,7 +533,7 @@ export default function BookingsPage() {
 
         {/* Reschedule Modal */}
         {rescheduleModalBooking && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 overflow-y-auto overscroll-contain">
             <div className="w-full max-w-lg rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 shadow-xl space-y-4 animate-in fade-in-0 zoom-in-95 duration-150">
               <div className="flex items-center justify-between pb-3 border-b border-[var(--border-subtle)]">
                 <div className="flex items-center gap-2.5">
@@ -713,7 +713,7 @@ export default function BookingsPage() {
 
         {/* Cancellation Reason Modal */}
         {cancelModalBooking && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 overflow-y-auto overscroll-contain">
             <div className="w-full max-w-md rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 shadow-xl space-y-4 animate-in fade-in-0 zoom-in-95 duration-150">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]">
@@ -782,7 +782,7 @@ export default function BookingsPage() {
 
         {/* Delete Confirmation Modal */}
         {deleteModalBooking && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 overflow-y-auto overscroll-contain">
             <div className="w-full max-w-md rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 shadow-xl space-y-4 animate-in fade-in-0 zoom-in-95 duration-150">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]">

@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
+import { useScrollLock } from "@/lib/use-scroll-lock";
 import type { BookingResponse } from "@sched/api-contract";
 
 interface BookingDetailDrawerProps {
@@ -47,6 +48,9 @@ export function BookingDetailDrawer({
   const [editEmail, setEditEmail] = useState("");
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [displayedBooking, setDisplayedBooking] = useState<BookingResponse | null>(booking);
+
+  // Lock background body scroll when drawer overlay is open
+  useScrollLock(isOpen);
 
   useEffect(() => {
     if (booking) {
@@ -189,29 +193,23 @@ export function BookingDetailDrawer({
 
   return (
     <>
-      {/* Backdrop overlay on mobile screens */}
+      {/* Backdrop overlay on Desktop and Mobile */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden backdrop-blur-xs transition-opacity duration-300"
+          className="fixed inset-0 bg-black/40 z-40 backdrop-blur-xs transition-opacity duration-300"
           onClick={onClose}
         />
       )}
 
-      {/* Slide-in Drawer matching Calendly sidebar with smooth animation */}
+      {/* Slide-in Drawer with isolated contained scrolling */}
       <div
-        className={`fixed inset-y-0 right-0 z-50 lg:static lg:z-auto transition-[width,opacity] duration-300 ease-in-out shrink-0 ${
-          isOpen
-            ? "w-full sm:w-[460px] lg:w-[480px] opacity-100 pointer-events-auto"
-            : "w-0 opacity-0 pointer-events-none"
+        className={`fixed inset-y-0 right-0 z-50 transition-transform duration-300 ease-in-out w-full sm:w-[500px] md:w-[540px] max-w-full ${
+          isOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
         }`}
       >
-        <aside
-          className={`w-full h-full lg:rounded-2xl border-l lg:border border-neutral-200 bg-white shadow-2xl lg:shadow-xl flex flex-col min-h-screen lg:min-h-[620px] lg:max-h-[calc(100vh-7rem)] lg:sticky lg:top-6 transition-transform duration-300 ease-in-out ${
-            isOpen ? "translate-x-0" : "translate-x-full"
-          }`}
-        >
+        <aside className="w-full h-full border-l border-neutral-200 bg-white shadow-2xl flex flex-col">
         {/* Drawer Header matching screenshot */}
-        <div className="px-5 sm:px-6 pt-5 pb-3 border-b border-neutral-200 sticky top-0 bg-white z-10 lg:rounded-t-2xl space-y-3.5">
+        <div className="px-5 sm:px-6 pt-5 pb-3 border-b border-neutral-200 sticky top-0 bg-white z-10 shrink-0 space-y-3.5">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-0.5 min-w-0">
               <h2 className="text-base font-bold tracking-tight text-neutral-900 truncate">
@@ -344,7 +342,7 @@ export function BookingDetailDrawer({
         </div>
 
         {/* Drawer Scrollable Body Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-5 space-y-6">
           {activeTab === "details" ? (
             <div className="space-y-5">
               {/* 1. Invitees Section matching screenshot */}
