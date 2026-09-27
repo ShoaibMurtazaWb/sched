@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Logo } from "@/components/logo";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { api, type CurrentUser } from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { useScrollLock } from "@/lib/use-scroll-lock";
@@ -610,97 +611,103 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
 
-            {/* Mobile User Avatar & Dropdown */}
-            <div className="relative" ref={mobileDropdownRef}>
-              <button
-                type="button"
-                onClick={() => setIsMobileDropdownOpen((prev) => !prev)}
-                className="flex items-center rounded-full p-0.5 border border-transparent hover:border-neutral-200 transition-all cursor-pointer"
-                aria-expanded={isMobileDropdownOpen}
-                aria-label="User account menu"
-              >
-                <div className="relative">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold select-none shadow-2xs overflow-hidden">
-                    {user.avatarUrl ? (
-                      <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
-                    ) : (
-                      user.name.charAt(0).toUpperCase()
-                    )}
-                  </div>
-                  <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white" />
-                </div>
-              </button>
+            {/* Mobile Right Actions: Theme Switcher & User Avatar Dropdown */}
+            <div className="flex items-center gap-2">
+              <ThemeSwitcher align="right" />
 
-              {isMobileDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 rounded-xl border border-neutral-200 bg-white p-2 shadow-xl z-50 animate-in fade-in-0 zoom-in-95 duration-150">
-                  <div className="flex items-center gap-2.5 p-2 rounded-lg bg-neutral-50 border border-neutral-100 mb-1">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-xs">
+              <div className="relative" ref={mobileDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileDropdownOpen((prev) => !prev)}
+                  className="flex items-center rounded-full p-0.5 border border-transparent hover:border-neutral-200 transition-all cursor-pointer"
+                  aria-expanded={isMobileDropdownOpen}
+                  aria-label="User account menu"
+                >
+                  <div className="relative">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold select-none shadow-2xs overflow-hidden">
                       {user.avatarUrl ? (
                         <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
                       ) : (
                         user.name.charAt(0).toUpperCase()
                       )}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-neutral-900 truncate">{user.name}</p>
-                      <p className="text-[11px] font-mono text-neutral-500 truncate">@{user.username}</p>
-                    </div>
+                    <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white" />
                   </div>
+                </button>
 
-                  {user.timezone && (
-                    <div className="px-2.5 py-1.5 mb-1 flex items-center justify-between text-[11px] font-mono text-neutral-600 bg-neutral-50 rounded-md">
-                      <span className="flex items-center gap-1.5 truncate">
-                        <Globe className="h-3 w-3 text-neutral-400 shrink-0" />
-                        <span className="truncate">{user.timezone}</span>
-                      </span>
-                      {currentTime && (
-                        <span className="text-black font-semibold tabular-nums shrink-0">{currentTime}</span>
-                      )}
+                {isMobileDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-64 rounded-xl border border-neutral-200 bg-white p-2 shadow-xl z-50 animate-in fade-in-0 zoom-in-95 duration-150">
+                    <div className="flex items-center gap-2.5 p-2 rounded-lg bg-neutral-50 border border-neutral-100 mb-1">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-xs">
+                        {user.avatarUrl ? (
+                          <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
+                        ) : (
+                          user.name.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-neutral-900 truncate">{user.name}</p>
+                        <p className="text-[11px] font-mono text-neutral-500 truncate">@{user.username}</p>
+                      </div>
                     </div>
-                  )}
 
-                  <Link
-                    href={`/public/${user.username}`}
-                    target="_blank"
-                    onClick={() => setIsMobileDropdownOpen(false)}
-                    className="flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <UserIcon className="h-3.5 w-3.5 text-neutral-600" />
-                      <span>Public Profile</span>
-                    </div>
-                    <ExternalLink className="h-3 w-3 text-neutral-400" />
-                  </Link>
+                    {user.timezone && (
+                      <div className="px-2.5 py-1.5 mb-1 flex items-center justify-between text-[11px] font-mono text-neutral-600 bg-neutral-50 rounded-md">
+                        <span className="flex items-center gap-1.5 truncate">
+                          <Globe className="h-3 w-3 text-neutral-400 shrink-0" />
+                          <span className="truncate">{user.timezone}</span>
+                        </span>
+                        {currentTime && (
+                          <span className="text-black font-semibold tabular-nums shrink-0">{currentTime}</span>
+                        )}
+                      </div>
+                    )}
 
-                  <Link
-                    href="/dashboard/settings"
-                    onClick={() => setIsMobileDropdownOpen(false)}
-                    className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 transition-colors"
-                  >
-                    <Settings className="h-3.5 w-3.5 text-neutral-600" />
-                    <span>Account Settings</span>
-                  </Link>
+                    <Link
+                      href={`/public/${user.username}`}
+                      target="_blank"
+                      onClick={() => setIsMobileDropdownOpen(false)}
+                      className="flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <UserIcon className="h-3.5 w-3.5 text-neutral-600" />
+                        <span>Public Profile</span>
+                      </div>
+                      <ExternalLink className="h-3 w-3 text-neutral-400" />
+                    </Link>
 
-                  <div className="my-1 border-t border-neutral-100" />
+                    <Link
+                      href="/dashboard/settings"
+                      onClick={() => setIsMobileDropdownOpen(false)}
+                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 transition-colors"
+                    >
+                      <Settings className="h-3.5 w-3.5 text-neutral-600" />
+                      <span>Account Settings</span>
+                    </Link>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileDropdownOpen(false);
-                      void logout();
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                  >
-                    <LogOut className="h-3.5 w-3.5" />
-                    <span>Sign out</span>
-                  </button>
-                </div>
-              )}
+                    <div className="my-1 border-t border-neutral-100" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileDropdownOpen(false);
+                        void logout();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      <span>Sign out</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </header>
 
           {/* Top Bar with User Profile Dropdown (Full Width, Pure White Header with increased height) */}
           <header className="hidden md:flex h-20 w-full items-center justify-end bg-white border-b border-neutral-200 px-8 sm:px-12 md:px-16 gap-4">
+            <ThemeSwitcher align="right" />
+
             {/* User Profile Dropdown Menu in Top Navbar */}
             <div className="relative" ref={dropdownRef}>
               <button
