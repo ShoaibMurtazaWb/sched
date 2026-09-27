@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "LocationType" ADD VALUE IF NOT EXISTS 'ZOOM';
