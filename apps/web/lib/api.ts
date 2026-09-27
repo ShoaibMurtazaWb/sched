@@ -80,10 +80,19 @@ export function apiUrl(path: string): string {
   return `${API_BASE_URL}/api/v1${cleanPath}`;
 }
 
+const DEFAULT_REQUEST_TIMEOUT_MS = 20_000;
+
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_REQUEST_TIMEOUT_MS);
+
+  if (init.signal) {
+    init.signal.addEventListener("abort", () => controller.abort());
   }
 
   let response: Response;
@@ -92,17 +101,26 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       ...init,
       headers,
       credentials: "include",
+      signal: controller.signal,
     });
-  } catch (netErr) {
+  } catch (netErr: unknown) {
+    clearTimeout(timeoutId);
+    if (netErr instanceof DOMException && netErr.name === "AbortError") {
+      throw new ApiError(504, {
+        error: {
+          code: "TIMEOUT",
+          message: "The request is taking too long. Please try again.",
+        },
+      });
+    }
     throw new ApiError(503, {
       error: {
         code: "NETWORK_ERROR",
-        message:
-          netErr instanceof Error
-            ? netErr.message
-            : "Network error: Unable to reach the scheduling API server.",
+        message: "Unable to connect to the server. Please check your internet connection and try again.",
       },
     });
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   const body = await parseBody(response);
@@ -113,7 +131,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     const message =
       body && typeof body === "object" && "message" in body
         ? String((body as { message: unknown }).message)
-        : `Request failed (${response.status})`;
+        : `Request failed with status ${response.status}`;
     throw new ApiError(response.status, {
       error: {
         code: response.status === 401 ? "UNAUTHORIZED" : "HTTP_ERROR",

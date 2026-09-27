@@ -13,7 +13,7 @@ async function bootstrap(): Promise<void> {
   const logger = new StructuredLoggerService();
   const app = await NestFactory.create(AppModule, { rawBody: false, logger });
   const expressApp = app.getHttpAdapter().getInstance();
-  if (process.env.TRUST_PROXY === "true") {
+  if (process.env.TRUST_PROXY === "true" || process.env.NODE_ENV === "production") {
     expressApp.set("trust proxy", 1);
   }
 
@@ -31,7 +31,30 @@ async function bootstrap(): Promise<void> {
     .filter(Boolean);
 
   app.enableCors({
-    origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      if (!origin) {
+        return callback(null, true);
+      }
+      const isAllowed = allowedOrigins.some((allowed) => {
+        if (allowed === "*") return true;
+        if (allowed.startsWith("*.")) {
+          return origin.endsWith(allowed.slice(1));
+        }
+        if (
+          (allowed.includes(".vercel.app") || process.env.NODE_ENV !== "production") &&
+          origin.endsWith(".vercel.app")
+        ) {
+          return true;
+        }
+        return origin === allowed;
+      });
+
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
     credentials: true,
   });
 

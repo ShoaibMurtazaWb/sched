@@ -21,7 +21,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TimezonePicker } from "@/components/timezone-picker";
 import { api, type UserSettingsResponse } from "@/lib/api";
-import { ApiError } from "@/lib/api-error";
+import { ApiError, formatApiError } from "@/lib/api-error";
 
 export default function SettingsPage() {
   const [_settings, setSettings] = useState<UserSettingsResponse | null>(null);
@@ -137,14 +137,7 @@ export default function SettingsPage() {
         );
       }
     } catch (err) {
-      let msg = "Failed to update profile.";
-      if (err instanceof ApiError && err.body.error.code === "EMAIL_CONFLICT") {
-        msg = "This email address is already in use by another account.";
-      } else if (err instanceof ApiError && err.body.error.code === "USERNAME_CONFLICT") {
-        msg = "This username is already taken by another account.";
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
+      const msg = formatApiError(err, "Failed to update profile.");
       setFeedback({ type: "error", message: msg });
     } finally {
       setIsSavingProfile(false);
@@ -180,15 +173,9 @@ export default function SettingsPage() {
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
-      let msg = "Failed to update password.";
-      if (err instanceof ApiError) {
-        if (err.body.error.code === "INVALID_CURRENT_PASSWORD") {
-          msg = "The current password you entered is incorrect.";
-        } else {
-          msg = err.message || msg;
-        }
-      } else if (err instanceof Error) {
-        msg = err.message;
+      let msg = formatApiError(err, "Failed to update password.");
+      if (err instanceof ApiError && err.body.error.code === "INVALID_CURRENT_PASSWORD") {
+        msg = "The current password you entered is incorrect.";
       }
       setFeedback({ type: "error", message: msg });
     } finally {

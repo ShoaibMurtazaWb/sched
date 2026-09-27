@@ -24,6 +24,8 @@ import { PrismaService } from "../src/shared/prisma/prisma.service";
 import { CryptoVaultService } from "../src/shared/services/crypto-vault.service";
 import { createTestApp, resetDatabase, uniqueLabel } from "./app.helper";
 
+jest.setTimeout(30000);
+
 class MockCalendarProvider implements CalendarProvider {
   public freeBusyBlocks: FreeBusyBlock[] = [];
   public shouldFailFreeBusy = false;

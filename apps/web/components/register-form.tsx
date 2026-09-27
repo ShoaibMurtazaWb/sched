@@ -12,7 +12,7 @@ import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Logo } from "@/components/logo";
 import { api } from "@/lib/api";
-import { ApiError, fieldErrors } from "@/lib/api-error";
+import { fieldErrors, formatApiError } from "@/lib/api-error";
 
 const FALLBACK_TIMEZONES = [
   "UTC",
@@ -123,12 +123,8 @@ export function RegisterForm() {
       });
       window.location.href = "/dashboard";
     } catch (caught) {
-      if (caught instanceof ApiError) {
-        setError(caught.message);
-        setFields(fieldErrors(caught));
-      } else {
-        setError("Could not create the account. Please check your details.");
-      }
+      setError(formatApiError(caught, "Could not create the account. Please check your details."));
+      setFields(fieldErrors(caught));
       setPending(false);
     }
   }

@@ -15,7 +15,13 @@ export class SessionAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const token = request.cookies?.[SESSION_COOKIE_NAME];
+    let token = request.cookies?.[SESSION_COOKIE_NAME];
+    if (typeof token !== "string" || token.length === 0) {
+      const authHeader = request.headers?.["authorization"] ?? request.headers?.["Authorization"];
+      if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+        token = authHeader.slice(7).trim();
+      }
+    }
     if (typeof token !== "string" || token.length === 0) {
       throw new UnauthorizedError();
     }

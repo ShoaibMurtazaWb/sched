@@ -37,13 +37,15 @@ export async function createTestApp(): Promise<INestApplication> {
   return app;
 }
 
-export async function resetDatabase(app: INestApplication): Promise<void> {
+export async function resetDatabase(app?: INestApplication): Promise<void> {
+  if (!app) return;
   const prisma = app.get(PrismaService);
   const userFilter = {
     schedule: {
       user: {
         email: {
           contains: "example.com",
+          mode: "insensitive" as const,
         },
       },
     },
@@ -51,9 +53,9 @@ export async function resetDatabase(app: INestApplication): Promise<void> {
 
   const bookingFilter = {
     OR: [
-      { host: { email: { contains: "example.com" } } },
-      { attendeeEmail: { contains: "example.com" } },
-      { eventType: { user: { email: { contains: "example.com" } } } },
+      { host: { email: { contains: "example.com", mode: "insensitive" as const } } },
+      { attendeeEmail: { contains: "example.com", mode: "insensitive" as const } },
+      { eventType: { user: { email: { contains: "example.com", mode: "insensitive" as const } } } },
     ],
   };
 
@@ -62,6 +64,7 @@ export async function resetDatabase(app: INestApplication): Promise<void> {
       user: {
         email: {
           contains: "example.com",
+          mode: "insensitive" as const,
         },
       },
     },
@@ -70,7 +73,7 @@ export async function resetDatabase(app: INestApplication): Promise<void> {
     where: {
       OR: [
         { booking: bookingFilter },
-        { integration: { user: { email: { contains: "example.com" } } } },
+        { integration: { user: { email: { contains: "example.com", mode: "insensitive" as const } } } },
       ],
     },
   });
@@ -78,14 +81,14 @@ export async function resetDatabase(app: INestApplication): Promise<void> {
     where: {
       OR: [
         { booking: bookingFilter },
-        { integration: { user: { email: { contains: "example.com" } } } },
+        { integration: { user: { email: { contains: "example.com", mode: "insensitive" as const } } } },
       ],
     },
   });
   await prisma.notificationJob.deleteMany({
     where: {
       OR: [
-        { recipientEmail: { contains: "example.com" } },
+        { recipientEmail: { contains: "example.com", mode: "insensitive" as const } },
         { booking: bookingFilter },
       ],
     },
@@ -103,6 +106,7 @@ export async function resetDatabase(app: INestApplication): Promise<void> {
       user: {
         email: {
           contains: "example.com",
+          mode: "insensitive" as const,
         },
       },
     },
@@ -112,6 +116,7 @@ export async function resetDatabase(app: INestApplication): Promise<void> {
       user: {
         email: {
           contains: "example.com",
+          mode: "insensitive" as const,
         },
       },
     },
@@ -127,6 +132,7 @@ export async function resetDatabase(app: INestApplication): Promise<void> {
       user: {
         email: {
           contains: "example.com",
+          mode: "insensitive" as const,
         },
       },
     },
@@ -136,6 +142,7 @@ export async function resetDatabase(app: INestApplication): Promise<void> {
       user: {
         email: {
           contains: "example.com",
+          mode: "insensitive" as const,
         },
       },
     },
@@ -145,6 +152,7 @@ export async function resetDatabase(app: INestApplication): Promise<void> {
       user: {
         email: {
           contains: "example.com",
+          mode: "insensitive" as const,
         },
       },
     },
@@ -153,6 +161,7 @@ export async function resetDatabase(app: INestApplication): Promise<void> {
     where: {
       email: {
         contains: "example.com",
+        mode: "insensitive" as const,
       },
     },
   });

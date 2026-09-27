@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Logo } from "@/components/logo";
 import { api } from "@/lib/api";
-import { ApiError, fieldErrors } from "@/lib/api-error";
+import { fieldErrors, formatApiError } from "@/lib/api-error";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -67,19 +67,8 @@ export function LoginForm() {
       const redirectTo = params?.get("redirectTo") || "/dashboard";
       window.location.href = redirectTo;
     } catch (err) {
-      if (err instanceof ApiError) {
-        if (
-          err.body.error.code === "INVALID_CREDENTIALS" ||
-          err.body.error.code === "UNAUTHENTICATED"
-        ) {
-          setError(err.body.error.message || "Invalid email or password.");
-        } else {
-          setError(err.message);
-        }
-        setFields(fieldErrors(err));
-      } else {
-        setError("Could not log in. Please check your credentials.");
-      }
+      setError(formatApiError(err, "Sign-in failed. The email or password is incorrect."));
+      setFields(fieldErrors(err));
       setPending(false);
     }
   }
