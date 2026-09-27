@@ -20,7 +20,6 @@ import {
   X,
   ChevronsLeft,
   ChevronsRight,
-  Sliders,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -35,12 +34,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Persisted collapsible sidebar state
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const mobileDropdownRef = useRef<HTMLDivElement>(null);
 
   // Load sidebar preference from localStorage
   useEffect(() => {
@@ -66,25 +67,67 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     });
   };
 
-  // Close mobile sidebar on route change
+  // Close mobile sidebar and dropdowns on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    setIsMobileDropdownOpen(false);
+    setIsDropdownOpen(false);
   }, [pathname]);
 
-  // Click-outside listener to close user menu dropdown
+  // Prevent background page scrolling while the mobile drawer is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      const originalOverflow = document.body.style.overflow;
+      const originalTouchAction = document.body.style.touchAction;
+      document.body.style.overflow = "hidden";
+      document.body.style.touchAction = "none";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        document.body.style.touchAction = originalTouchAction;
+      };
+    }
+  }, [isMobileMenuOpen]);
+
+  // Touch/swipe-to-close handlers for mobile drawer
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const firstTouch = e.touches[0];
+    if (firstTouch) {
+      setTouchStartX(firstTouch.clientX);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const firstTouch = e.touches[0];
+    if (touchStartX === null || !firstTouch) return;
+    const currentX = firstTouch.clientX;
+    const diff = currentX - touchStartX;
+    if (diff < -50) {
+      setIsMobileMenuOpen(false);
+      setTouchStartX(null);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchStartX(null);
+  };
+
+  // Click-outside listener to close user menu dropdowns
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
       }
+      if (mobileDropdownRef.current && !mobileDropdownRef.current.contains(event.target as Node)) {
+        setIsMobileDropdownOpen(false);
+      }
     }
-    if (isDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isDropdownOpen]);
+  }, []);
 
   async function checkAuth() {
     setIsLoading(true);
@@ -199,10 +242,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         icon: BarChart3,
       },
       {
-        label: "Admin center",
+        label: "Settings",
         href: "/dashboard/settings",
         active: pathname.startsWith("/dashboard/settings"),
-        icon: Sliders,
+        icon: Settings,
       },
     ],
     [pathname]
@@ -254,57 +297,149 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] flex flex-col antialiased selection:bg-blue-600 selection:text-white">
-      {/* Main App Container */}
-      <div className="flex flex-1 min-h-0">
-        {/* Mobile Header Bar (< md) */}
-        <header className="md:hidden sticky top-0 z-40 flex w-full items-center justify-between border-b border-neutral-200 bg-white px-4 py-3 shadow-2xs">
-          <div className="flex items-center gap-2.5">
+      {/* Mobile Navigation Drawer Sheet (Modern, clean, mobile-first Calendly-style UX) */}
+      <div
+        className={`fixed inset-0 z-50 md:hidden transition-all duration-300 ${
+          isMobileMenuOpen ? "pointer-events-auto visible" : "pointer-events-none invisible"
+        }`}
+        aria-modal="true"
+        role="dialog"
+      >
+        {/* Backdrop with Smooth Fade Animation */}
+        <div
+          className={`fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300 ease-in-out ${
+            isMobileMenuOpen ? "opacity-100" : "opacity-0"
+          }`}
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-label="Close navigation menu"
+        />
+
+        {/* Drawer Panel with Slide-in / Slide-out Animation */}
+        <div
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          className={`fixed inset-y-0 left-0 z-50 flex flex-col w-[290px] max-w-[85vw] bg-white border-r border-neutral-200 shadow-2xl transition-transform duration-300 ease-out will-change-transform ${
+            isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          {/* Drawer Header: User Identity & Crisp Close Button */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold text-sm shadow-2xs select-none overflow-hidden">
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
+                ) : (
+                  user.name.charAt(0).toUpperCase()
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-neutral-900 truncate leading-snug">{user.name}</p>
+                <p className="text-xs text-neutral-500 truncate leading-tight">@{user.username}</p>
+              </div>
+            </div>
+
             <button
               type="button"
-              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 cursor-pointer transition-colors"
-              aria-label="Toggle navigation menu"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer shrink-0"
+              aria-label="Close navigation menu"
             >
-              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              <X className="h-5 w-5" />
             </button>
-            <Link href="/dashboard" className="flex items-center gap-2">
-              <Logo className="h-7 w-7" />
-              <span className="font-bold tracking-tight text-neutral-900 text-lg">Sched</span>
+          </div>
+
+          {/* Navigation Items (Left-aligned, clean vertical rhythm, NO Create button) */}
+          <div className="flex-1 overflow-y-auto px-3.5 py-4 space-y-1.5">
+            {mainNavItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`group relative flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer ${
+                    item.active
+                      ? "bg-blue-50 text-blue-600 font-semibold"
+                      : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900"
+                  }`}
+                >
+                  {item.active && (
+                    <span className="absolute left-0 top-2.5 bottom-2.5 w-1 bg-blue-600 rounded-r-full" />
+                  )}
+                  <Icon
+                    className={`h-5 w-5 shrink-0 transition-colors ${
+                      item.active
+                        ? "text-blue-600 stroke-[2.2]"
+                        : "text-neutral-500 group-hover:text-neutral-700 stroke-[1.8]"
+                    }`}
+                  />
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              );
+            })}
+
+            {/* Analytics Item */}
+            <Link
+              href="/dashboard/analytics"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`group relative flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer ${
+                pathname.startsWith("/dashboard/analytics")
+                  ? "bg-blue-50 text-blue-600 font-semibold"
+                  : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900"
+              }`}
+            >
+              {pathname.startsWith("/dashboard/analytics") && (
+                <span className="absolute left-0 top-2.5 bottom-2.5 w-1 bg-blue-600 rounded-r-full" />
+              )}
+              <BarChart3
+                className={`h-5 w-5 shrink-0 transition-colors ${
+                  pathname.startsWith("/dashboard/analytics")
+                    ? "text-blue-600 stroke-[2.2]"
+                    : "text-neutral-500 group-hover:text-neutral-700 stroke-[1.8]"
+                }`}
+              />
+              <span className="truncate">Analytics</span>
             </Link>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button asChild size="sm" className="h-8 px-3 text-xs rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold gap-1.5 shadow-2xs cursor-pointer">
-              <Link href="/dashboard/event-types/new">
-                <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
-                <span>Create</span>
-              </Link>
-            </Button>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold shadow-2xs overflow-hidden shrink-0">
-              {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
-              ) : (
-                user.name.charAt(0).toUpperCase()
+          {/* Bottom Section: Settings (Anchored cleanly at bottom with mobile safe-area spacing) */}
+          <div className="p-3.5 border-t border-neutral-100 shrink-0 bg-neutral-50/50 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
+            <Link
+              href="/dashboard/settings"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`group relative flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer ${
+                pathname.startsWith("/dashboard/settings")
+                  ? "bg-blue-50 text-blue-600 font-semibold"
+                  : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
+              }`}
+            >
+              {pathname.startsWith("/dashboard/settings") && (
+                <span className="absolute left-0 top-2.5 bottom-2.5 w-1 bg-blue-600 rounded-r-full" />
               )}
-            </div>
+              <Settings
+                className={`h-5 w-5 shrink-0 transition-colors ${
+                  pathname.startsWith("/dashboard/settings")
+                    ? "text-blue-600 stroke-[2.2]"
+                    : "text-neutral-500 group-hover:text-neutral-700 stroke-[1.8]"
+                }`}
+              />
+              <span className="truncate">Settings</span>
+            </Link>
           </div>
-        </header>
+        </div>
+      </div>
 
-        {/* Mobile Drawer Backdrop */}
-        {isMobileMenuOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs md:hidden"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-        )}
+      {/* Main App Container */}
+      <div className="flex flex-1 min-h-screen md:min-h-0">
 
-        {/* Dynamic Collapsible Sidebar Navigation */}
+        {/* Desktop Sidebar Navigation (Hidden on Mobile) */}
         <aside
-          className={`fixed inset-y-0 left-0 z-50 flex flex-col justify-between border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] transition-[width,transform] duration-500 ease-in-out md:sticky md:top-0 md:h-screen md:translate-x-0 ${
-            isMobileMenuOpen ? "translate-x-0 w-[260px]" : "-translate-x-full md:translate-x-0"
-          } ${isCollapsed ? "md:w-[84px]" : "md:w-[260px]"}`}
+          className={`hidden md:flex flex-col justify-between border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] transition-[width] duration-500 ease-in-out md:sticky md:top-0 md:h-screen ${
+            isCollapsed ? "md:w-[84px]" : "md:w-[260px]"
+          }`}
         >
-          {/* Floating Expand Button on Right Border (When Collapsed) - Centered with Logo */}
+          {/* Floating Expand Button on Right Border (When Collapsed) */}
           {isCollapsed && (
             <button
               type="button"
@@ -330,7 +465,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 )}
               </Link>
 
-              {/* Desktop Collapse Button (When Expanded) - Exact matching size (32x32) with logo */}
+              {/* Desktop Collapse Button (When Expanded) */}
               {!isCollapsed && (
                 <button
                   type="button"
@@ -342,18 +477,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   <ChevronsLeft className="h-4.5 w-4.5 stroke-[2.5]" />
                 </button>
               )}
-
-              {/* Mobile Close Button */}
-              <button
-                type="button"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="md:hidden p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-              >
-                <X className="h-5 w-5" />
-              </button>
             </div>
 
-            {/* "+ Create" Action Button (Calendly Style) */}
+            {/* "+ Create" Action Button (Desktop Only) */}
             <div className="mb-5">
               {isCollapsed ? (
                 <div className="flex justify-center">
@@ -429,7 +555,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
 
-          {/* Bottom Section: Analytics & Admin Center */}
+          {/* Bottom Section: Analytics & Settings */}
           <div className={`mt-auto shrink-0 border-t border-[var(--border-subtle)] ${isCollapsed ? "px-3" : "px-5"} pt-3 pb-4 transition-[padding] duration-500`}>
             <nav className="space-y-1">
               {secondaryNavItems.map((item) => {
@@ -477,6 +603,112 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
         {/* Main Content Area */}
         <div className="flex-1 min-w-0 flex flex-col min-h-screen bg-[var(--bg-canvas)]">
+          {/* Mobile Header Bar (< md) - Compact 56px, left hamburger + Sched brand, right avatar with mobile menu */}
+          <header className="md:hidden sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-neutral-200 bg-white px-4 shadow-2xs shrink-0">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50 active:bg-neutral-100 transition-colors cursor-pointer"
+                aria-label="Open navigation menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <Link href="/dashboard" className="flex items-center gap-2">
+                <Logo className="h-7 w-7 shrink-0" />
+                <span className="font-bold tracking-tight text-neutral-900 text-lg">Sched</span>
+              </Link>
+            </div>
+
+            {/* Mobile User Avatar & Dropdown */}
+            <div className="relative" ref={mobileDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsMobileDropdownOpen((prev) => !prev)}
+                className="flex items-center rounded-full p-0.5 border border-transparent hover:border-neutral-200 transition-all cursor-pointer"
+                aria-expanded={isMobileDropdownOpen}
+                aria-label="User account menu"
+              >
+                <div className="relative">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold select-none shadow-2xs overflow-hidden">
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
+                    ) : (
+                      user.name.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+                </div>
+              </button>
+
+              {isMobileDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-64 rounded-xl border border-neutral-200 bg-white p-2 shadow-xl z-50 animate-in fade-in-0 zoom-in-95 duration-150">
+                  <div className="flex items-center gap-2.5 p-2 rounded-lg bg-neutral-50 border border-neutral-100 mb-1">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-xs">
+                      {user.avatarUrl ? (
+                        <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
+                      ) : (
+                        user.name.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-neutral-900 truncate">{user.name}</p>
+                      <p className="text-[11px] font-mono text-neutral-500 truncate">@{user.username}</p>
+                    </div>
+                  </div>
+
+                  {user.timezone && (
+                    <div className="px-2.5 py-1.5 mb-1 flex items-center justify-between text-[11px] font-mono text-neutral-600 bg-neutral-50 rounded-md">
+                      <span className="flex items-center gap-1.5 truncate">
+                        <Globe className="h-3 w-3 text-neutral-400 shrink-0" />
+                        <span className="truncate">{user.timezone}</span>
+                      </span>
+                      {currentTime && (
+                        <span className="text-black font-semibold tabular-nums shrink-0">{currentTime}</span>
+                      )}
+                    </div>
+                  )}
+
+                  <Link
+                    href={`/public/${user.username}`}
+                    target="_blank"
+                    onClick={() => setIsMobileDropdownOpen(false)}
+                    className="flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <UserIcon className="h-3.5 w-3.5 text-neutral-600" />
+                      <span>Public Profile</span>
+                    </div>
+                    <ExternalLink className="h-3 w-3 text-neutral-400" />
+                  </Link>
+
+                  <Link
+                    href="/dashboard/settings"
+                    onClick={() => setIsMobileDropdownOpen(false)}
+                    className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 transition-colors"
+                  >
+                    <Settings className="h-3.5 w-3.5 text-neutral-600" />
+                    <span>Account Settings</span>
+                  </Link>
+
+                  <div className="my-1 border-t border-neutral-100" />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileDropdownOpen(false);
+                      void logout();
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    <span>Sign out</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </header>
+
           {/* Top Bar with User Profile Dropdown (Full Width, Pure White Header with increased height) */}
           <header className="hidden md:flex h-20 w-full items-center justify-end bg-white border-b border-neutral-200 px-8 sm:px-12 md:px-16 gap-4">
             {/* User Profile Dropdown Menu in Top Navbar */}
@@ -576,7 +808,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </header>
 
           {/* Dynamic Page Body (Full Width with generous responsive padding) */}
-          <main className="flex-1 w-full max-w-full px-3.5 sm:px-6 md:px-10 lg:px-14 py-4 sm:py-6 md:py-8 overflow-x-hidden">
+          <main className="flex-1 w-full max-w-full px-4 sm:px-6 md:px-10 lg:px-14 py-4 sm:py-6 md:py-8">
             {children}
           </main>
         </div>

@@ -6,6 +6,9 @@ import { Toaster } from "@/components/ui/toast";
 export const metadata: Metadata = {
   title: "Sched",
   description: "Scheduling for hosts",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
