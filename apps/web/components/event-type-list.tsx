@@ -172,28 +172,29 @@ function EventTypeListContent() {
       {/* Left/Main Content Section (Smoothly shrinks when Right Sidebar Drawer is open) */}
       <div className="flex-1 min-w-0 w-full space-y-6 transition-all duration-500 ease-in-out">
         {/* Calendly Secondary Header Row (Directly under Top Navbar) */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-black">Scheduling</h1>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-black">Scheduling</h1>
           </div>
 
           {/* Right Header Actions: Manage Availability & Create Pill */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <Button
               asChild
               variant="outline"
-              className="rounded-full border-neutral-300 bg-white hover:bg-neutral-50 px-4 py-2 text-xs font-semibold text-neutral-800 shadow-2xs gap-2 transition-all cursor-pointer"
+              className="rounded-full border-neutral-300 bg-white hover:bg-neutral-50 px-3.5 sm:px-4 py-2 text-xs font-semibold text-neutral-800 shadow-2xs gap-1.5 sm:gap-2 transition-all cursor-pointer"
             >
               <Link href="/dashboard/availability">
                 <Calendar className="h-3.5 w-3.5 text-neutral-600" />
-                <span>Manage availability</span>
+                <span className="hidden xs:inline">Manage availability</span>
+                <span className="xs:hidden">Availability</span>
               </Link>
             </Button>
 
             <Button
               type="button"
               onClick={openCreateDrawer}
-              className="rounded-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-xs font-semibold shadow-2xs gap-1.5 transition-all cursor-pointer"
+              className="rounded-full bg-blue-600 hover:bg-blue-700 text-white px-3.5 sm:px-4 py-2 text-xs font-semibold shadow-2xs gap-1.5 transition-all cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
               <span>Create</span>
@@ -280,7 +281,7 @@ function EventTypeListContent() {
                 <Card
                   key={item.id}
                   onClick={() => openEditDrawer(item.id)}
-                  className={`group relative flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-2xl border p-5 shadow-2xs hover:shadow-xs transition-all duration-200 border-l-[8px] w-full cursor-pointer hover:bg-blue-50/50 hover:border-blue-300 ${
+                  className={`group relative flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 rounded-2xl border p-4 sm:p-5 shadow-2xs hover:shadow-xs transition-all duration-200 border-l-[8px] w-full cursor-pointer hover:bg-blue-50/50 hover:border-blue-300 ${
                     isCurrentlyEditing
                       ? "border-blue-500 bg-blue-50/60 ring-1 ring-blue-500 border-l-blue-600 shadow-2xs"
                       : "border-neutral-200 bg-white border-l-blue-500 hover:border-l-blue-600"
@@ -308,7 +309,7 @@ function EventTypeListContent() {
                   </div>
 
                   {/* Right: Actions with Animated Tooltips */}
-                  <div className="flex flex-wrap items-center gap-2 self-end md:self-center shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 self-start sm:self-end md:self-center shrink-0 pt-1 sm:pt-0">
                     {/* Copy Link Pill Button */}
                     <Tooltip content="Copy public booking link">
                       <Button

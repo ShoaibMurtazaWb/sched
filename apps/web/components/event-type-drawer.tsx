@@ -418,20 +418,29 @@ export function EventTypeDrawer({
     user && effectiveSlug ? `/public/${user.username}/${effectiveSlug}` : null;
 
   return (
-    <div
-      className={`transition-[width,opacity] duration-500 ease-in-out shrink-0 overflow-hidden ${
-        isOpen
-          ? "w-full md:w-[440px] lg:w-[480px] opacity-100"
-          : "w-0 opacity-0 pointer-events-none"
-      }`}
-    >
-      <aside
-        className={`w-full md:w-[440px] lg:w-[480px] rounded-2xl border border-neutral-200 bg-white shadow-xl flex flex-col h-full min-h-[600px] max-h-[calc(100vh-8rem)] sticky top-6 transition-transform duration-500 ease-in-out ${
-          isOpen ? "translate-x-0" : "translate-x-full"
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden backdrop-blur-xs transition-opacity duration-300"
+          onClick={onClose}
+        />
+      )}
+
+      <div
+        className={`fixed inset-y-0 right-0 z-50 lg:static lg:z-auto transition-[width,opacity] duration-500 ease-in-out shrink-0 ${
+          isOpen
+            ? "w-full sm:w-[460px] lg:w-[480px] opacity-100 pointer-events-auto"
+            : "w-0 opacity-0 pointer-events-none"
         }`}
       >
-        {/* Drawer Top Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 sticky top-0 bg-white z-10 rounded-t-2xl">
+        <aside
+          className={`w-full h-full lg:rounded-2xl border-l lg:border border-neutral-200 bg-white shadow-2xl lg:shadow-xl flex flex-col min-h-screen lg:min-h-[600px] lg:max-h-[calc(100vh-8rem)] lg:sticky lg:top-6 transition-transform duration-500 ease-in-out ${
+            isOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          {/* Drawer Top Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 sticky top-0 bg-white z-10 lg:rounded-t-2xl">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
               {eventTypeId ? "Edit Event Type" : "New Event Type"}
@@ -1187,5 +1196,6 @@ export function EventTypeDrawer({
         </div>
       </aside>
     </div>
+    </>
   );
 }

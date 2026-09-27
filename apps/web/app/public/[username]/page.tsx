@@ -131,7 +131,7 @@ export default function PublicHostPage({
           </div>
         </header>
 
-        <main className="mx-auto max-w-4xl px-6 py-12 space-y-10">
+        <main className="mx-auto max-w-4xl px-4 sm:px-6 py-8 sm:py-12 space-y-8 sm:space-y-10">
           {/* Host Profile Card */}
           <Card className="p-8 bg-[var(--bg-surface)] border-[var(--border-subtle)] shadow-xs flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left rounded-xl">
             {profile.user.avatarUrl ? (

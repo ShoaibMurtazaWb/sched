@@ -478,19 +478,19 @@ export default function BookingsPage() {
                               setSelectedBooking(b);
                               setIsDrawerOpen(true);
                             }}
-                            className={`group flex items-center justify-between px-6 py-4 sm:py-4.5 rounded-2xl border transition-all duration-150 cursor-pointer shadow-2xs ${
+                            className={`group flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:px-6 sm:py-4 rounded-2xl border transition-all duration-150 cursor-pointer shadow-2xs gap-2 sm:gap-4 ${
                               isSelected
                                 ? "border-blue-500 bg-blue-50/50 ring-1 ring-blue-500 shadow-xs"
                                 : "border-neutral-200 bg-white hover:bg-blue-50/40 hover:border-blue-300"
                             }`}
                           >
-                            {/* Left: Time with increased font and width */}
-                            <div className="w-32 sm:w-40 shrink-0 text-sm font-semibold text-neutral-700 tabular-nums">
+                            {/* Left: Time */}
+                            <div className="sm:w-36 md:w-40 shrink-0 text-xs sm:text-sm font-semibold text-neutral-700 tabular-nums">
                               {timeStr}
                             </div>
 
-                            {/* Center: Dot + Title as meeting name with invitee (increased font) */}
-                            <div className="flex-1 flex items-center gap-3 min-w-0 px-4">
+                            {/* Center: Dot + Title as meeting name with invitee */}
+                            <div className="flex-1 flex items-center gap-2.5 sm:gap-3 min-w-0 sm:px-2">
                               <span className="h-2.5 w-2.5 rounded-full bg-purple-500 shrink-0" />
                               <p className="text-sm sm:text-base font-bold text-neutral-900 truncate">
                                 {b.eventType.title}{" "}
@@ -499,13 +499,13 @@ export default function BookingsPage() {
                             </div>
 
                             {/* Right: Status badge if cancelled */}
-                            <div className="shrink-0 flex items-center gap-2">
-                              {b.status === "CANCELLED" && (
+                            {b.status === "CANCELLED" && (
+                              <div className="shrink-0 flex items-center gap-2 self-start sm:self-center">
                                 <Badge variant="danger" className="text-xs py-0.5 px-2.5">
                                   Cancelled
                                 </Badge>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}

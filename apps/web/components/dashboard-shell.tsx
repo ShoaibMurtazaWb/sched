@@ -257,8 +257,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       {/* Main App Container */}
       <div className="flex flex-1 min-h-0">
         {/* Mobile Header Bar (< md) */}
-        <header className="md:hidden sticky top-0 z-40 flex w-full items-center justify-between border-b border-neutral-200 bg-white px-5 py-3.5 shadow-2xs">
-          <div className="flex items-center gap-3">
+        <header className="md:hidden sticky top-0 z-40 flex w-full items-center justify-between border-b border-neutral-200 bg-white px-4 py-3 shadow-2xs">
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen((prev) => !prev)}
@@ -267,20 +267,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             >
               {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <Link href="/dashboard" className="flex items-center gap-2.5">
+            <Link href="/dashboard" className="flex items-center gap-2">
               <Logo className="h-7 w-7" />
               <span className="font-bold tracking-tight text-neutral-900 text-lg">Sched</span>
             </Link>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <Button asChild size="sm" className="h-8 px-3 text-xs rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold gap-1.5 shadow-2xs cursor-pointer">
               <Link href="/dashboard/event-types/new">
                 <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
                 <span>Create</span>
               </Link>
             </Button>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold shadow-2xs overflow-hidden">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold shadow-2xs overflow-hidden shrink-0">
               {user.avatarUrl ? (
                 <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
               ) : (
@@ -575,8 +575,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Dynamic Page Body (Full Width with generous padding) */}
-          <main className="flex-1 w-full px-8 sm:px-12 md:px-16 py-6 sm:py-8 md:py-10">
+          {/* Dynamic Page Body (Full Width with generous responsive padding) */}
+          <main className="flex-1 w-full max-w-full px-3.5 sm:px-6 md:px-10 lg:px-14 py-4 sm:py-6 md:py-8 overflow-x-hidden">
             {children}
           </main>
         </div>
