@@ -200,6 +200,7 @@ export const inboundSelectQuestionSchema = z.object({
   type: z.literal("SELECT"),
   label: z.string().trim().min(1, "Question label is required").max(255),
   required: z.boolean().default(false),
+  allowMultiple: z.boolean().default(false).optional(),
   options: z
     .array(inboundSelectOptionSchema)
     .min(2, "Select questions require at least 2 options")
@@ -253,6 +254,7 @@ export const selectQuestionSchema = z.object({
   type: z.literal("SELECT"),
   label: z.string().min(1).max(255),
   required: z.boolean(),
+  allowMultiple: z.boolean().default(false).optional(),
   options: z.array(selectOptionSchema).min(2).max(25),
 });
 

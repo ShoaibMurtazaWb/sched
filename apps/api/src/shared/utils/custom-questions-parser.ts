@@ -79,6 +79,7 @@ export function reconcileCustomQuestions(
         type: "SELECT",
         label: q.label.trim(),
         required: Boolean(q.required),
+        allowMultiple: Boolean(q.allowMultiple),
         options,
       });
     } else if (q.type === "CHECKBOX") {
@@ -222,7 +223,13 @@ export function validateAndBuildCustomResponses(
         value: trimmed,
       });
     } else if (q.type === "SELECT") {
-      if (rawVal === undefined || rawVal === null || rawVal === "") {
+      const isMissing =
+        rawVal === undefined ||
+        rawVal === null ||
+        rawVal === "" ||
+        (Array.isArray(rawVal) && rawVal.length === 0);
+
+      if (isMissing) {
         if (q.required) {
           throw new BadRequestError(
             "REQUIRED_QUESTION_MISSING",
@@ -232,28 +239,65 @@ export function validateAndBuildCustomResponses(
         continue;
       }
 
-      if (typeof rawVal !== "string") {
-        throw new BadRequestError(
-          "INVALID_RESPONSE_TYPE",
-          `Response for "${q.label}" must be an option ID.`
-        );
-      }
+      if (q.allowMultiple) {
+        let selectedIds: string[] = [];
+        if (Array.isArray(rawVal)) {
+          selectedIds = rawVal.map((v) => String(v).trim()).filter(Boolean);
+        } else if (typeof rawVal === "string") {
+          selectedIds = rawVal.split(",").map((s) => s.trim()).filter(Boolean);
+        } else {
+          throw new BadRequestError(
+            "INVALID_RESPONSE_TYPE",
+            `Response for "${q.label}" must be an array of option IDs.`
+          );
+        }
 
-      const selectedOption = q.options.find((opt) => opt.id === rawVal.trim());
-      if (!selectedOption) {
-        throw new BadRequestError(
-          "INVALID_OPTION",
-          `Invalid option selected for question "${q.label}".`
-        );
-      }
+        if (q.required && selectedIds.length === 0) {
+          throw new BadRequestError(
+            "REQUIRED_QUESTION_MISSING",
+            `Question "${q.label}" is required.`
+          );
+        }
 
-      snapshots.push({
-        questionId: q.id,
-        label: q.label,
-        type: "SELECT",
-        value: selectedOption.id,
-        selectedOptionLabel: selectedOption.label,
-      });
+        const validOptions = q.options.filter((opt) => selectedIds.includes(opt.id));
+        if (validOptions.length !== selectedIds.length) {
+          throw new BadRequestError(
+            "INVALID_OPTION",
+            `Invalid option selected for question "${q.label}".`
+          );
+        }
+
+        snapshots.push({
+          questionId: q.id,
+          label: q.label,
+          type: "SELECT",
+          value: selectedIds.join(", "),
+          selectedOptionLabel: validOptions.map((o) => o.label).join(", "),
+        });
+      } else {
+        if (typeof rawVal !== "string") {
+          throw new BadRequestError(
+            "INVALID_RESPONSE_TYPE",
+            `Response for "${q.label}" must be an option ID.`
+          );
+        }
+
+        const selectedOption = q.options.find((opt) => opt.id === rawVal.trim());
+        if (!selectedOption) {
+          throw new BadRequestError(
+            "INVALID_OPTION",
+            `Invalid option selected for question "${q.label}".`
+          );
+        }
+
+        snapshots.push({
+          questionId: q.id,
+          label: q.label,
+          type: "SELECT",
+          value: selectedOption.id,
+          selectedOptionLabel: selectedOption.label,
+        });
+      }
     } else if (q.type === "CHECKBOX") {
       if (rawVal === undefined || rawVal === null) {
         if (q.required) {

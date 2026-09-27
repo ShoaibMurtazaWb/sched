@@ -35,6 +35,7 @@ export type PublicEventTypeResponse = {
     name: string;
     username: string;
     timezone: string;
+    avatarUrl: string | null;
   };
 };
 
@@ -73,6 +74,7 @@ export function toPublicEventType(row: EventType, host: User): PublicEventTypeRe
       name: host.name,
       username: host.username,
       timezone: host.timezone,
+      avatarUrl: host.avatarUrl ?? null,
     },
   };
 }

@@ -134,9 +134,17 @@ export default function PublicHostPage({
         <main className="mx-auto max-w-4xl px-6 py-12 space-y-10">
           {/* Host Profile Card */}
           <Card className="p-8 bg-[var(--bg-surface)] border-[var(--border-subtle)] shadow-xs flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left rounded-xl">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xl font-bold text-white shadow-2xs">
-              {initials}
-            </div>
+            {profile.user.avatarUrl ? (
+              <img
+                src={profile.user.avatarUrl}
+                alt={profile.user.name}
+                className="h-16 w-16 shrink-0 rounded-full object-cover border border-[var(--border-subtle)] shadow-2xs"
+              />
+            ) : (
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xl font-bold text-white shadow-2xs">
+                {initials}
+              </div>
+            )}
 
             <div className="flex-1 space-y-1.5">
               <h1 className="text-2xl font-bold text-[var(--text-primary)]">{profile.user.name}</h1>

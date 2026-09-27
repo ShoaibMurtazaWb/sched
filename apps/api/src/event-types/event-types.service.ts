@@ -38,6 +38,18 @@ export class EventTypesService {
       throw new BadRequestError("INVALID_LOCATION", "Invalid location configuration.");
     }
 
+    if (location.type === "ZOOM") {
+      const zoomIntegration = await this.prisma.zoomIntegration.findUnique({
+        where: { userId },
+      });
+      if (!zoomIntegration || zoomIntegration.status !== "CONNECTED") {
+        throw new BadRequestError(
+          "ZOOM_NOT_CONNECTED",
+          "You must connect your Zoom account before creating a Zoom event type."
+        );
+      }
+    }
+
     const customQuestions = reconcileCustomQuestions(input.customQuestions);
 
     try {
@@ -102,6 +114,17 @@ export class EventTypesService {
       const parsedLocation = parseEventTypeLocation(input.location.type, input.location.data);
       if (!parsedLocation) {
         throw new BadRequestError("INVALID_LOCATION", "Invalid location configuration.");
+      }
+      if (parsedLocation.type === "ZOOM") {
+        const zoomIntegration = await this.prisma.zoomIntegration.findUnique({
+          where: { userId },
+        });
+        if (!zoomIntegration || zoomIntegration.status !== "CONNECTED") {
+          throw new BadRequestError(
+            "ZOOM_NOT_CONNECTED",
+            "You must connect your Zoom account before setting Zoom as your meeting location."
+          );
+        }
       }
       locationUpdate = {
         locationType: parsedLocation.type as import("@prisma/client").LocationType,
@@ -256,6 +279,7 @@ export class EventTypesService {
         name: user.name,
         username: user.username,
         timezone: user.timezone,
+        avatarUrl: user.avatarUrl ?? null,
       },
       eventTypes: user.eventTypes.map((et) => ({
         id: et.id,

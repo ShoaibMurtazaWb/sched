@@ -8,19 +8,20 @@ import {
   Clock,
   Link2,
   MapPin,
-  Video,
   PhoneCall,
   PhoneForwarded,
   Globe,
   AlertCircle,
   Plus,
   Trash2,
+  ExternalLink,
 } from "lucide-react";
 import {
   createEventTypeBodySchema,
   updateEventTypeBodySchema,
   type EventTypeLocationConfig,
   type LocationType,
+  type ZoomIntegrationResponse,
 } from "@sched/api-contract";
 import { ZoomLogo } from "@/components/zoom-logo";
 import { Button } from "@/components/ui/button";
@@ -31,7 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
-import { api, type CurrentUser, type EventType } from "@/lib/api";
+import { api, apiUrl, type CurrentUser, type EventType } from "@/lib/api";
 import { ApiError, fieldErrors } from "@/lib/api-error";
 
 const DURATION_PRESETS = [15, 30, 45, 60];
@@ -69,7 +70,6 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
   const [inPersonAddress, setInPersonAddress] = useState("");
   const [displayPublicAddress, setDisplayPublicAddress] = useState(false);
   const [inPersonNotes, setInPersonNotes] = useState("");
-  const [videoUrl, setVideoUrl] = useState("");
   const [videoNotes, setVideoNotes] = useState("");
   const [customLinkUrl, setCustomLinkUrl] = useState("");
   const [customLinkNotes, setCustomLinkNotes] = useState("");
@@ -84,10 +84,36 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
       type: "TEXT" | "TEXTAREA" | "SELECT" | "CHECKBOX";
       label: string;
       required: boolean;
+      allowMultiple?: boolean;
       placeholder?: string;
       options?: Array<{ id?: string; label: string }>;
     }>
   >([]);
+
+  // Zoom connection state
+  const [isZoomConnected, setIsZoomConnected] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const checkZoom = () => {
+      api<ZoomIntegrationResponse | null>("/integrations/zoom")
+        .then((res) => {
+          if (mounted) {
+            setIsZoomConnected(Boolean(res && res.status === "CONNECTED"));
+          }
+        })
+        .catch(() => {
+          if (mounted) setIsZoomConnected(false);
+        });
+    };
+
+    checkZoom();
+    window.addEventListener("focus", checkZoom);
+    return () => {
+      mounted = false;
+      window.removeEventListener("focus", checkZoom);
+    };
+  }, []);
 
   useEffect(() => {
     api<CurrentUser>("/auth/me").then(setUser).catch(() => {});
@@ -120,8 +146,9 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
           } else if (data.location.type === "ZOOM") {
             setVideoNotes(String(locData.extraNotes || ""));
           } else if (data.location.type === "STATIC_VIDEO") {
-            setVideoUrl(String(locData.url || ""));
-            setVideoNotes(String(locData.extraNotes || ""));
+            setLocationType("CUSTOM_LINK");
+            setCustomLinkUrl(String(locData.url || ""));
+            setCustomLinkNotes(String(locData.extraNotes || ""));
           } else if (data.location.type === "CUSTOM_LINK") {
             setCustomLinkUrl(String(locData.url || ""));
             setCustomLinkNotes(String(locData.extraNotes || ""));
@@ -178,6 +205,7 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
           type: "SELECT",
           label: "",
           required: false,
+          allowMultiple: false,
           options: [
             { label: "Option 1" },
             { label: "Option 2" },
@@ -215,6 +243,7 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
     patch: Partial<{
       label: string;
       required: boolean;
+      allowMultiple?: boolean;
       placeholder?: string;
       options?: Array<{ id?: string; label: string }>;
     }>
@@ -313,10 +342,10 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
       case "STATIC_VIDEO":
       default:
         return {
-          type: "STATIC_VIDEO",
+          type: "CUSTOM_LINK",
           data: {
-            url: videoUrl,
-            extraNotes: videoNotes || undefined,
+            url: customLinkUrl,
+            extraNotes: customLinkNotes || undefined,
           },
         };
     }
@@ -326,6 +355,11 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
     e.preventDefault();
     setError(null);
     setFields({});
+
+    if (locationType === "ZOOM" && isZoomConnected === false) {
+      setError("Please connect your Zoom account first or choose another location.");
+      return;
+    }
 
     const locationConfig = buildLocationConfig();
 
@@ -490,12 +524,6 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
                     icon: ZoomLogo,
                   },
                   {
-                    id: "STATIC_VIDEO" as LocationType,
-                    label: "Google Meet / Link",
-                    desc: "Static meeting room URL",
-                    icon: Video,
-                  },
-                  {
                     id: "IN_PERSON" as LocationType,
                     label: "In-Person",
                     desc: "Physical address / venue",
@@ -522,18 +550,28 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
                 ].map((item) => {
                   const Icon = item.icon;
                   const isSelected = locationType === item.id;
+                  const isZoomDisconnected = item.id === "ZOOM" && isZoomConnected === false;
                   return (
                     <button
                       key={item.id}
                       type="button"
                       onClick={() => setLocationType(item.id)}
-                      className={`flex flex-col items-start text-left p-3 rounded-xl border text-xs transition-colors cursor-pointer ${
+                      className={`flex flex-col items-start text-left p-3 rounded-xl border text-xs transition-colors cursor-pointer relative ${
                         isSelected
-                          ? "border-neutral-900 bg-neutral-900/5 dark:border-white dark:bg-white/10 text-[var(--text-primary)] font-semibold ring-1 ring-neutral-900 dark:ring-white"
+                          ? isZoomDisconnected
+                            ? "border-amber-500 bg-amber-50/60 dark:border-amber-500 dark:bg-amber-950/20 text-[var(--text-primary)] font-semibold ring-1 ring-amber-500"
+                            : "border-neutral-900 bg-neutral-900/5 dark:border-white dark:bg-white/10 text-[var(--text-primary)] font-semibold ring-1 ring-neutral-900 dark:ring-white"
                           : "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:border-neutral-400"
                       }`}
                     >
-                      <Icon className="h-4 w-4 mb-1.5 text-neutral-800 dark:text-neutral-200" />
+                      <div className="flex items-center justify-between w-full mb-1.5">
+                        <Icon className="h-4 w-4 text-neutral-800 dark:text-neutral-200" />
+                        {isZoomDisconnected && (
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-100/90 dark:text-amber-300 dark:bg-amber-900/50 px-1.5 py-0.5 rounded">
+                            Connect required
+                          </span>
+                        )}
+                      </div>
                       <span className="font-semibold text-[var(--text-primary)]">{item.label}</span>
                       <span className="text-[10px] text-[var(--text-muted)] mt-0.5 leading-tight">{item.desc}</span>
                     </button>
@@ -544,24 +582,51 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
               {/* Conditional Sub-forms per Location Type */}
               <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)]/60 p-4 space-y-3 mt-2">
                 {locationType === "ZOOM" && (
-                  <div className="space-y-2 text-xs text-[var(--text-secondary)]">
-                    <div className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
-                      <ZoomLogo className="h-4 w-4 shrink-0" />
-                      <span>Zoom Video Integration</span>
+                  isZoomConnected === false ? (
+                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-900 dark:text-amber-200 space-y-3">
+                      <div className="flex items-start gap-2.5">
+                        <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                        <div className="space-y-1 flex-1">
+                          <p className="font-bold">Zoom Account Not Connected</p>
+                          <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed font-normal">
+                            You must connect your Zoom account to Sched before using Zoom as a meeting location. Connect it below, or choose another meeting location above.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="pt-0.5">
+                        <a
+                          href={apiUrl("/integrations/zoom/connect")}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#2D8CFF] hover:bg-blue-600 text-white font-semibold text-xs transition-colors shadow-2xs cursor-pointer"
+                        >
+                          <ZoomLogo className="h-3.5 w-3.5" />
+                          <span>Connect Zoom</span>
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
                     </div>
-                    <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
-                      Sched will automatically generate a dynamic, password-protected Zoom meeting for every confirmed booking. The unique join link, meeting ID, and passcode will be included directly in the invitee&apos;s email and calendar invite.
-                    </p>
-                    <div className="space-y-1 pt-1">
-                      <Label htmlFor="zoomNotes">Meeting Notes / Agenda (Optional)</Label>
-                      <Input
-                        id="zoomNotes"
-                        value={videoNotes}
-                        onChange={(e) => setVideoNotes(e.target.value)}
-                        placeholder="e.g. Please join prepared with your project outline."
-                      />
+                  ) : (
+                    <div className="space-y-2 text-xs text-[var(--text-secondary)]">
+                      <div className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
+                        <ZoomLogo className="h-4 w-4 shrink-0" />
+                        <span>Zoom Video Integration</span>
+                      </div>
+                      <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                        Sched will automatically generate a dynamic, password-protected Zoom meeting for every confirmed booking. The unique join link, meeting ID, and passcode will be included directly in the invitee&apos;s email and calendar invite.
+                      </p>
+                      <div className="space-y-1 pt-1">
+                        <Label htmlFor="zoomNotes">Meeting Notes / Agenda (Optional)</Label>
+                        <Input
+                          id="zoomNotes"
+                          value={videoNotes}
+                          onChange={(e) => setVideoNotes(e.target.value)}
+                          placeholder="e.g. Please join prepared with your project outline."
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )
                 )}
                 {locationType === "IN_PERSON" && (
                   <>
@@ -604,37 +669,6 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
                   </>
                 )}
 
-                {locationType === "STATIC_VIDEO" && (
-                  <>
-                    <div className="space-y-1">
-                      <Label htmlFor="videoUrl">Static Video Meeting URL</Label>
-                      <Input
-                        id="videoUrl"
-                        value={videoUrl}
-                        onChange={(e) => setVideoUrl(e.target.value)}
-                        placeholder="https://meet.google.com/abc-defg-hij or personal Zoom link"
-                        required
-                      />
-                      {fields["location.data.url"] && (
-                        <p className="text-xs text-[var(--status-danger-text)] font-medium">
-                          {fields["location.data.url"]}
-                        </p>
-                      )}
-                      <p className="text-[11px] text-[var(--text-muted)]">
-                        Private link: only revealed to attendees in their confirmation email and calendar invite.
-                      </p>
-                    </div>
-                    <div className="space-y-1 pt-1">
-                      <Label htmlFor="videoNotes">Passcode / Meeting Notes (Optional)</Label>
-                      <Input
-                        id="videoNotes"
-                        value={videoNotes}
-                        onChange={(e) => setVideoNotes(e.target.value)}
-                        placeholder="e.g. Passcode: 123456"
-                      />
-                    </div>
-                  </>
-                )}
 
                 {locationType === "CUSTOM_LINK" && (
                   <>
@@ -892,13 +926,41 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
                         )}
 
                         {q.type === "SELECT" && (
-                          <div className="space-y-2 pt-1">
+                          <div className="space-y-2.5 pt-1">
                             <div className="flex items-center justify-between">
+                              <Label className="text-xs font-semibold">Selection Mode</Label>
+                              <div className="flex items-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-subtle)] p-0.5 text-xs">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateQuestion(qIndex, { allowMultiple: false })}
+                                  className={`px-2.5 py-1 rounded-md font-medium text-[11px] transition-all cursor-pointer ${
+                                    !q.allowMultiple
+                                      ? "bg-white text-blue-600 shadow-2xs font-semibold"
+                                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                                  }`}
+                                >
+                                  Single choice
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateQuestion(qIndex, { allowMultiple: true })}
+                                  className={`px-2.5 py-1 rounded-md font-medium text-[11px] transition-all cursor-pointer ${
+                                    q.allowMultiple
+                                      ? "bg-white text-blue-600 shadow-2xs font-semibold"
+                                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                                  }`}
+                                >
+                                  Multiple choice
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-0.5">
                               <Label className="text-xs font-semibold">Dropdown Options (min 2)</Label>
                               <button
                                 type="button"
                                 onClick={() => handleAddOption(qIndex)}
-                                className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                                className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 cursor-pointer"
                               >
                                 <Plus className="h-3 w-3" />
                                 <span>Add Option</span>
@@ -982,6 +1044,11 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
               )}
 
               <div className="flex items-center justify-end gap-2">
+                {locationType === "ZOOM" && isZoomConnected === false && (
+                  <span className="text-xs text-amber-600 dark:text-amber-400 font-medium mr-1 hidden sm:inline">
+                    Connect Zoom to continue
+                  </span>
+                )}
                 <Button
                   asChild
                   type="button"
@@ -992,9 +1059,9 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={pending}
+                  disabled={pending || (locationType === "ZOOM" && isZoomConnected === false)}
                   size="sm"
-                  className="gap-2"
+                  className="gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {pending && <Spinner size="sm" />}
                   <span>{pending ? "Saving…" : eventTypeId ? "Save Changes" : "Create Event Type"}</span>

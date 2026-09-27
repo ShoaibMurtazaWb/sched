@@ -55,6 +55,7 @@ export type PublicEventType = {
     name: string;
     username: string;
     timezone: string;
+    avatarUrl?: string | null;
   };
 };
 

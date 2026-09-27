@@ -45,6 +45,7 @@ interface PublicEventDetails {
     name: string;
     username: string;
     timezone: string;
+    avatarUrl?: string | null;
   };
 }
 
@@ -94,11 +95,11 @@ export default function PublicBookingPage({
   const [attendeeEmail, setAttendeeEmail] = useState("");
   const [attendeePhone, setAttendeePhone] = useState("");
   const [attendeeNotes, setAttendeeNotes] = useState("");
-  const [customAnswers, setCustomAnswers] = useState<Record<string, string | boolean>>({});
+  const [customAnswers, setCustomAnswers] = useState<Record<string, string | boolean | string[]>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldValidationErrors, setFieldValidationErrors] = useState<Record<string, string>>({});
 
-  const setCustomAnswer = (qId: string, val: string | boolean) => {
+  const setCustomAnswer = (qId: string, val: string | boolean | string[]) => {
     setCustomAnswers((prev) => ({ ...prev, [qId]: val }));
   };
 
@@ -184,9 +185,19 @@ export default function PublicBookingPage({
       return;
     }
 
-    setIsSubmitting(true);
-    setFieldValidationErrors({});
-    setSlotConflictMessage(null);
+    if (eventDetails?.customQuestions) {
+      for (const q of eventDetails.customQuestions) {
+        if (q.required && q.type === "SELECT" && q.allowMultiple) {
+          const ans = customAnswers[q.id];
+          const hasSelected = Array.isArray(ans) ? ans.length > 0 : Boolean(ans);
+          if (!hasSelected) {
+            setIsSubmitting(false);
+            toast.error("Required Question", `Please select at least one option for "${q.label}".`);
+            return;
+          }
+        }
+      }
+    }
 
     try {
       const result = await api<BookingResponse>(`/public/${username}/${eventSlug}/book`, {
@@ -396,10 +407,29 @@ export default function PublicBookingPage({
             {/* Left Column: Host & Event Details (3 cols) */}
             <div className="p-7 sm:p-8 lg:col-span-3 flex flex-col justify-start space-y-6">
               <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  {eventDetails.host.avatarUrl ? (
+                    <img
+                      src={eventDetails.host.avatarUrl}
+                      alt={eventDetails.host.name}
+                      className="h-10 w-10 rounded-full object-cover shrink-0 border border-neutral-200 shadow-2xs"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white shadow-2xs">
+                      {(eventDetails.host.name.charAt(0) || "H").toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider truncate">
+                      {eventDetails.host.name}
+                    </p>
+                    <p className="text-[11px] text-neutral-400 font-mono truncate">
+                      @{eventDetails.host.username}
+                    </p>
+                  </div>
+                </div>
+
                 <div>
-                  <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
-                    {eventDetails.host.name}
-                  </p>
                   <h1 className="text-2xl sm:text-[26px] font-bold tracking-tight text-neutral-900 mt-1">
                     {eventDetails.title}
                   </h1>
@@ -454,9 +484,9 @@ export default function PublicBookingPage({
                   )}
                 </div>
 
-                {eventDetails.description && (
+                {Boolean(eventDetails.description?.trim()) && (
                   <p className="text-xs text-neutral-600 leading-relaxed pt-3 whitespace-pre-wrap">
-                    {eventDetails.description}
+                    {eventDetails.description.trim()}
                   </p>
                 )}
               </div>
@@ -853,6 +883,58 @@ export default function PublicBookingPage({
                         }
 
                         if (q.type === "SELECT") {
+                          if (q.allowMultiple) {
+                            const selectedArray: string[] = Array.isArray(val)
+                              ? val
+                              : typeof val === "string" && val
+                              ? val.split(",").map((s) => s.trim()).filter(Boolean)
+                              : [];
+
+                            const handleToggle = (optId: string) => {
+                              const next = selectedArray.includes(optId)
+                                ? selectedArray.filter((id) => id !== optId)
+                                : [...selectedArray, optId];
+                              setCustomAnswer(q.id, next);
+                            };
+
+                            return (
+                              <div key={q.id} className="space-y-1.5 pt-1">
+                                <div className="flex items-center justify-between">
+                                  <Label>
+                                    {q.label}{" "}
+                                    {q.required && <span className="text-red-500">*</span>}
+                                  </Label>
+                                  <span className="text-[10px] text-neutral-400 font-medium">
+                                    Select multiple
+                                  </span>
+                                </div>
+                                <div className="space-y-1.5 pt-0.5">
+                                  {q.options.map((opt) => {
+                                    const isChecked = selectedArray.includes(opt.id);
+                                    return (
+                                      <label
+                                        key={opt.id}
+                                        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border text-xs cursor-pointer transition-all ${
+                                          isChecked
+                                            ? "border-blue-600 bg-blue-50/50 text-blue-900 font-medium shadow-2xs"
+                                            : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+                                        }`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={isChecked}
+                                          onChange={() => handleToggle(opt.id)}
+                                          className="rounded border-neutral-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                                        />
+                                        <span>{opt.label}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          }
+
                           return (
                             <div key={q.id} className="space-y-1">
                               <Label htmlFor={`q_${q.id}`}>
@@ -864,7 +946,7 @@ export default function PublicBookingPage({
                                 value={typeof val === "string" ? val : ""}
                                 onChange={(e) => setCustomAnswer(q.id, e.target.value)}
                                 required={q.required}
-                                className="w-full h-9 rounded-md border border-neutral-300 bg-white px-3 py-1 text-xs text-neutral-900 shadow-xs focus:border-blue-600 focus:outline-none"
+                                className="w-full h-9 rounded-md border border-neutral-300 bg-white px-3 py-1 text-xs text-neutral-900 shadow-xs focus:border-blue-600 focus:outline-none cursor-pointer"
                               >
                                 <option value="">Select an option...</option>
                                 {q.options.map((opt) => (

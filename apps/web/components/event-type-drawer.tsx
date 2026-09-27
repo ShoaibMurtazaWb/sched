@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import {
   X,
   MapPin,
-  Video,
   PhoneCall,
   Link2,
   ChevronDown,
@@ -26,9 +25,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
-import { api, type CurrentUser, type EventType } from "@/lib/api";
+import { api, apiUrl, type CurrentUser, type EventType } from "@/lib/api";
 import { ApiError, fieldErrors } from "@/lib/api-error";
-import type { LocationType, CustomQuestion, ScheduleResponse } from "@sched/api-contract";
+import type { LocationType, CustomQuestion, ScheduleResponse, ZoomIntegrationResponse } from "@sched/api-contract";
 
 const DURATION_PRESETS = [15, 30, 45, 60];
 
@@ -102,7 +101,6 @@ export function EventTypeDrawer({
   const [inPersonAddress, setInPersonAddress] = useState("");
   const [displayPublicAddress, setDisplayPublicAddress] = useState(false);
   const [inPersonNotes, setInPersonNotes] = useState("");
-  const [videoUrl, setVideoUrl] = useState("");
   const [videoNotes, setVideoNotes] = useState("");
   const [customLinkUrl, setCustomLinkUrl] = useState("");
   const [customLinkNotes, setCustomLinkNotes] = useState("");
@@ -117,11 +115,41 @@ export function EventTypeDrawer({
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
+  // Zoom Integration Status
+  const [isZoomConnected, setIsZoomConnected] = useState<boolean | null>(null);
+
   // Load user and schedule
   useEffect(() => {
     api<CurrentUser>("/auth/me").then(setUser).catch(() => {});
     api<ScheduleResponse>("/schedules/default").then(setSchedule).catch(() => {});
   }, []);
+
+  // Check Zoom connection status when drawer is open, and refresh on window focus
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isMounted = true;
+    function checkZoom() {
+      api<ZoomIntegrationResponse | null>("/integrations/zoom")
+        .then((res) => {
+          if (isMounted) {
+            setIsZoomConnected(res?.status === "CONNECTED");
+          }
+        })
+        .catch(() => {
+          if (isMounted) {
+            setIsZoomConnected(false);
+          }
+        });
+    }
+
+    checkZoom();
+    window.addEventListener("focus", checkZoom);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("focus", checkZoom);
+    };
+  }, [isOpen]);
 
   // Reset or load event data when drawer opens or eventTypeId changes
   useEffect(() => {
@@ -141,7 +169,6 @@ export function EventTypeDrawer({
       setInPersonAddress("");
       setDisplayPublicAddress(false);
       setInPersonNotes("");
-      setVideoUrl("");
       setVideoNotes("");
       setCustomLinkUrl("");
       setCustomLinkNotes("");
@@ -183,8 +210,9 @@ export function EventTypeDrawer({
           } else if (data.location.type === "ZOOM") {
             setVideoNotes(String(locData.extraNotes || ""));
           } else if (data.location.type === "STATIC_VIDEO") {
-            setVideoUrl(String(locData.url || ""));
-            setVideoNotes(String(locData.extraNotes || ""));
+            setLocationType("CUSTOM_LINK");
+            setCustomLinkUrl(String(locData.url || ""));
+            setCustomLinkNotes(String(locData.extraNotes || ""));
           } else if (data.location.type === "CUSTOM_LINK") {
             setCustomLinkUrl(String(locData.url || ""));
             setCustomLinkNotes(String(locData.extraNotes || ""));
@@ -221,6 +249,7 @@ export function EventTypeDrawer({
           type: "SELECT",
           label: "",
           required: false,
+          allowMultiple: false,
           options: [
             { id: crypto.randomUUID(), label: "Option 1" },
             { id: crypto.randomUUID(), label: "Option 2" },
@@ -261,10 +290,58 @@ export function EventTypeDrawer({
     );
   }
 
+  function handleAddOption(questionIndex: number) {
+    setCustomQuestions((prev) =>
+      prev.map((q, i) => {
+        if (i !== questionIndex || q.type !== "SELECT") return q;
+        const currentOptions = q.options || [];
+        return {
+          ...q,
+          options: [
+            ...currentOptions,
+            { id: crypto.randomUUID(), label: `Option ${currentOptions.length + 1}` },
+          ],
+        };
+      })
+    );
+  }
+
+  function handleUpdateOption(questionIndex: number, optionIndex: number, label: string) {
+    setCustomQuestions((prev) =>
+      prev.map((q, i) => {
+        if (i !== questionIndex || q.type !== "SELECT") return q;
+        const target = q.options[optionIndex];
+        if (!target) return q;
+        const newOptions = [...q.options];
+        newOptions[optionIndex] = { id: target.id || crypto.randomUUID(), label };
+        return { ...q, options: newOptions };
+      })
+    );
+  }
+
+  function handleRemoveOption(questionIndex: number, optionIndex: number) {
+    setCustomQuestions((prev) =>
+      prev.map((q, i) => {
+        if (i !== questionIndex || q.type !== "SELECT") return q;
+        if (q.options.length <= 2) return q;
+        return {
+          ...q,
+          options: q.options.filter((_, optIdx) => optIdx !== optionIndex),
+        };
+      })
+    );
+  }
+
   async function handleSave() {
     setIsSaving(true);
     setError(null);
     setErrors({});
+
+    if (locationType === "ZOOM" && isZoomConnected === false) {
+      setError("Please connect your Zoom account first or choose another location.");
+      setIsSaving(false);
+      return;
+    }
 
     // Construct Location Payload
     let locationData: Record<string, unknown> = {};
@@ -278,12 +355,7 @@ export function EventTypeDrawer({
         displayPublicAddress,
         extraNotes: inPersonNotes,
       };
-    } else if (locationType === "STATIC_VIDEO") {
-      locationData = {
-        url: videoUrl,
-        extraNotes: videoNotes,
-      };
-    } else if (locationType === "CUSTOM_LINK") {
+    } else if (locationType === "CUSTOM_LINK" || (locationType as string) === "STATIC_VIDEO") {
       locationData = {
         url: customLinkUrl,
         extraNotes: customLinkNotes,
@@ -505,30 +577,23 @@ export function EventTypeDrawer({
                         onClick={() => setLocationType("ZOOM")}
                         className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
                           locationType === "ZOOM"
-                            ? "border-blue-600 bg-blue-50/60 text-blue-700 shadow-2xs"
+                            ? isZoomConnected === false
+                              ? "border-amber-500 bg-amber-50/60 text-amber-900 shadow-2xs"
+                              : "border-blue-600 bg-blue-50/60 text-blue-700 shadow-2xs"
                             : "border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50"
                         }`}
                       >
                         <ZoomLogo className="h-4 w-4 shrink-0" />
-                        <div>
-                          <div className="font-bold">Zoom</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold">Zoom</span>
+                            {isZoomConnected === false && (
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-100/90 px-1.5 py-0.5 rounded">
+                                Connect required
+                              </span>
+                            )}
+                          </div>
                           <div className="text-[10px] text-neutral-500 font-normal">Dynamic meeting room</div>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setLocationType("STATIC_VIDEO")}
-                        className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
-                          locationType === "STATIC_VIDEO"
-                            ? "border-blue-600 bg-blue-50/60 text-blue-700 shadow-2xs"
-                            : "border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50"
-                        }`}
-                      >
-                        <Video className="h-4 w-4 shrink-0 text-blue-600" />
-                        <div>
-                          <div className="font-bold">Google Meet / URL</div>
-                          <div className="text-[10px] text-neutral-500 font-normal">Static meeting link</div>
                         </div>
                       </button>
 
@@ -567,7 +632,7 @@ export function EventTypeDrawer({
                       <button
                         type="button"
                         onClick={() => setLocationType("CUSTOM_LINK")}
-                        className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer col-span-2 ${
+                        className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
                           locationType === "CUSTOM_LINK"
                             ? "border-blue-600 bg-blue-50/60 text-blue-700 shadow-2xs"
                             : "border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50"
@@ -583,32 +648,44 @@ export function EventTypeDrawer({
 
                     {/* Contextual Location Inputs */}
                     {locationType === "ZOOM" && (
-                      <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-100 text-xs text-blue-900 space-y-1 pt-2">
-                        <div className="flex items-center gap-2 font-semibold text-blue-800">
-                          <ZoomLogo className="h-4 w-4 shrink-0" />
-                          <span>Zoom Video Integration</span>
+                      isZoomConnected === false ? (
+                        <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-amber-900 space-y-3">
+                          <div className="flex items-start gap-2.5">
+                            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                            <div className="space-y-1 flex-1">
+                              <p className="font-bold text-amber-900">Zoom Account Not Connected</p>
+                              <p className="text-[11px] text-amber-800 leading-relaxed font-normal">
+                                You must connect your Zoom account to Sched before using Zoom as a meeting location. Connect it below, or choose another meeting location above.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="pt-0.5">
+                            <a
+                              href={apiUrl("/integrations/zoom/connect")}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#2D8CFF] hover:bg-blue-600 text-white font-semibold text-xs transition-colors shadow-2xs cursor-pointer"
+                            >
+                              <ZoomLogo className="h-3.5 w-3.5" />
+                              <span>Connect Zoom</span>
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </div>
                         </div>
-                        <p className="text-[11px] text-blue-700 leading-relaxed font-normal">
-                          Sched will automatically generate a dynamic Zoom meeting and include the unique join link in the calendar invite and confirmation email upon booking.
-                        </p>
-                      </div>
+                      ) : (
+                        <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-100 text-xs text-blue-900 space-y-1 pt-2">
+                          <div className="flex items-center gap-2 font-semibold text-blue-800">
+                            <ZoomLogo className="h-4 w-4 shrink-0" />
+                            <span>Zoom Video Integration Connected</span>
+                          </div>
+                          <p className="text-[11px] text-blue-700 leading-relaxed font-normal">
+                            Sched will automatically generate a dynamic Zoom meeting and include the unique join link in the calendar invite and confirmation email upon booking.
+                          </p>
+                        </div>
+                      )
                     )}
 
-                    {locationType === "STATIC_VIDEO" && (
-                      <div className="space-y-1.5 pt-1">
-                        <Label htmlFor="drawer-video-url" className="text-xs font-semibold text-neutral-800">
-                          Static Video Meeting URL
-                        </Label>
-                        <Input
-                          id="drawer-video-url"
-                          type="url"
-                          value={videoUrl}
-                          onChange={(e) => setVideoUrl(e.target.value)}
-                          placeholder="https://meet.google.com/abc-defg-hij"
-                          className="h-9 text-xs rounded-xl border-neutral-300 focus:border-blue-600"
-                        />
-                      </div>
-                    )}
 
                     {locationType === "IN_PERSON" && (
                       <div className="space-y-2 pt-1">
@@ -823,19 +900,14 @@ export function EventTypeDrawer({
                 )}
               </div>
 
-              {/* 6. Host Section (User Email) */}
+              {/* 6. Host Section */}
               <div className="pt-3">
                 <button
                   type="button"
                   onClick={() => toggleSection("host")}
                   className="flex w-full items-center justify-between py-2 text-sm font-bold text-black hover:text-blue-600 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-2">
-                    <span>Host</span>
-                    <span className="text-xs font-normal text-neutral-500 truncate max-w-[200px]">
-                      {user?.email || "Host"}
-                    </span>
-                  </div>
+                  <span>Host</span>
                   {openSections.host ? (
                     <ChevronUp className="h-4 w-4 text-neutral-500" />
                   ) : (
@@ -846,9 +918,17 @@ export function EventTypeDrawer({
                 {openSections.host && (
                   <div className="mt-3 space-y-3 pb-2">
                     <div className="flex items-center gap-3 p-3.5 rounded-xl border border-neutral-200 bg-neutral-50/70">
-                      <div className="h-10 w-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
-                        {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
-                      </div>
+                      {user?.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt={user?.name || "Host"}
+                          className="h-10 w-10 rounded-full object-cover shrink-0 border border-neutral-200 shadow-2xs"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs">
+                          {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-bold text-black truncate">
                           {user?.name || user?.username || "Host"}
@@ -899,12 +979,12 @@ export function EventTypeDrawer({
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] font-bold uppercase text-neutral-600">
-                            Question {idx + 1} ({q.type})
+                            Question {idx + 1} ({q.type === "SELECT" ? (q.allowMultiple ? "Multi-select" : "Select") : q.type})
                           </span>
                           <button
                             type="button"
                             onClick={() => handleRemoveQuestion(idx)}
-                            className="text-neutral-400 hover:text-rose-600 p-1"
+                            className="text-neutral-400 hover:text-rose-600 p-1 cursor-pointer"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -914,11 +994,84 @@ export function EventTypeDrawer({
                           type="text"
                           value={q.label}
                           onChange={(e) => handleUpdateQuestion(idx, { label: e.target.value })}
-                          placeholder="Enter your question…"
+                          placeholder={q.type === "SELECT" ? "e.g. Which topics would you like to discuss?" : "Enter your question…"}
                           className="h-8 text-xs rounded-lg border-neutral-300 bg-white"
                         />
 
-                        <label className="flex items-center gap-2 text-xs text-neutral-700 cursor-pointer">
+                        {/* SELECT configuration: Single vs Multi choice and Option list */}
+                        {q.type === "SELECT" && (
+                          <div className="space-y-2.5 pt-2 border-t border-neutral-200/80">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-semibold text-neutral-700">Selection type:</span>
+                              <div className="flex items-center rounded-lg border border-neutral-200 bg-neutral-100 p-0.5 text-xs">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateQuestion(idx, { allowMultiple: false })}
+                                  className={`px-2.5 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
+                                    !q.allowMultiple
+                                      ? "bg-white text-blue-600 font-bold shadow-2xs"
+                                      : "text-neutral-600 hover:text-neutral-900 font-medium"
+                                  }`}
+                                >
+                                  Single choice
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateQuestion(idx, { allowMultiple: true })}
+                                  className={`px-2.5 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
+                                    q.allowMultiple
+                                      ? "bg-white text-blue-600 font-bold shadow-2xs"
+                                      : "text-neutral-600 hover:text-neutral-900 font-medium"
+                                  }`}
+                                >
+                                  Multiple choice
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1.5 pt-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-semibold text-neutral-700">Options (min 2)</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddOption(idx)}
+                                  className="text-[11px] text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Plus className="h-3 w-3" />
+                                  <span>Add option</span>
+                                </button>
+                              </div>
+
+                              <div className="space-y-1.5">
+                                {q.options?.map((opt, optIdx) => (
+                                  <div key={opt.id || optIdx} className="flex items-center gap-1.5">
+                                    <span className="text-[11px] text-neutral-400 font-mono w-4 shrink-0 text-center">
+                                      {optIdx + 1}.
+                                    </span>
+                                    <Input
+                                      type="text"
+                                      value={opt.label}
+                                      onChange={(e) => handleUpdateOption(idx, optIdx, e.target.value)}
+                                      placeholder={`Option ${optIdx + 1}`}
+                                      className="h-7 text-xs rounded-lg border-neutral-300 bg-white flex-1"
+                                      required
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveOption(idx, optIdx)}
+                                      disabled={(q.options?.length || 0) <= 2}
+                                      className="text-neutral-400 hover:text-rose-600 disabled:opacity-30 disabled:hover:text-neutral-400 p-1 cursor-pointer"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <label className="flex items-center gap-2 text-xs text-neutral-700 cursor-pointer pt-0.5">
                           <input
                             type="checkbox"
                             checked={q.required}
@@ -957,6 +1110,16 @@ export function EventTypeDrawer({
                         type="button"
                         variant="outline"
                         size="sm"
+                        onClick={() => handleAddQuestion("SELECT")}
+                        className="rounded-full border-neutral-300 text-xs gap-1.5 h-7 px-3 cursor-pointer"
+                      >
+                        <Plus className="h-3 w-3 text-neutral-600" />
+                        <span>Select / Dropdown</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleAddQuestion("CHECKBOX")}
                         className="rounded-full border-neutral-300 text-xs gap-1.5 h-7 px-3 cursor-pointer"
                       >
@@ -989,6 +1152,11 @@ export function EventTypeDrawer({
           </div>
 
           <div className="flex items-center gap-2">
+            {locationType === "ZOOM" && isZoomConnected === false && (
+              <span className="text-xs text-amber-600 font-medium mr-1 hidden sm:inline">
+                Connect Zoom to continue
+              </span>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -1003,8 +1171,8 @@ export function EventTypeDrawer({
               type="button"
               size="sm"
               onClick={() => void handleSave()}
-              disabled={isSaving || !title.trim()}
-              className="rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-5 shadow-2xs gap-1.5 cursor-pointer"
+              disabled={isSaving || !title.trim() || (locationType === "ZOOM" && isZoomConnected === false)}
+              className="rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-5 shadow-2xs gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? (
                 <>

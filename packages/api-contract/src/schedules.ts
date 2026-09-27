@@ -76,6 +76,7 @@ export interface PublicHostProfileResponse {
     name: string;
     username: string;
     timezone: string;
+    avatarUrl?: string | null;
   };
   eventTypes: Array<{
     id: string;

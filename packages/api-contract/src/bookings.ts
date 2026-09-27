@@ -19,7 +19,7 @@ export const bookingCustomResponseSnapshotSchema = z.object({
   questionId: z.string(),
   label: z.string(),
   type: CustomQuestionTypeEnum,
-  value: z.union([z.string(), z.boolean()]),
+  value: z.union([z.string(), z.boolean(), z.array(z.string())]),
   selectedOptionLabel: z.string().nullable().optional(),
 });
 
@@ -38,7 +38,7 @@ export const createBookingBodySchema = z.object({
     }),
   attendeePhoneNumber: z.string().trim().optional(),
   attendeeNotes: z.string().trim().max(1000, "Notes cannot exceed 1000 characters").optional().default(""),
-  customResponses: z.record(z.union([z.string(), z.boolean()])).optional(),
+  customResponses: z.record(z.union([z.string(), z.boolean(), z.array(z.string())])).optional(),
 });
 
 export type CreateBookingBody = z.infer<typeof createBookingBodySchema>;
