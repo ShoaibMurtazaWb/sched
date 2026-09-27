@@ -192,7 +192,7 @@ describe("Zoom Meeting Creation Flow in Bookings", () => {
     const host = await setupHost(uniqueLabel("unconnected-host"));
 
     // Seed Zoom event type directly (as if legacy or disconnected after creation)
-    const ev = await prisma.eventType.create({
+    await prisma.eventType.create({
       data: {
         userId: host.user.id,
         title: "Disconnected Zoom Meeting",
@@ -227,7 +227,7 @@ describe("Zoom Meeting Creation Flow in Bookings", () => {
 
     jest.spyOn(zoomService, "createMeeting").mockRejectedValue(new Error("Zoom API Rate Limit Exceeded"));
 
-    const ev = await prisma.eventType.create({
+    await prisma.eventType.create({
       data: {
         userId: host.user.id,
         title: "Failing Zoom",
@@ -271,7 +271,7 @@ describe("Zoom Meeting Creation Flow in Bookings", () => {
       startUrl: "https://zoom.us/s/1112223334",
     });
 
-    const ev = await prisma.eventType.create({
+    await prisma.eventType.create({
       data: {
         userId: host.user.id,
         title: "Repeat Booking",
@@ -328,7 +328,7 @@ describe("Zoom Meeting Creation Flow in Bookings", () => {
     const updateMeetingSpy = jest.spyOn(zoomService, "updateMeeting").mockResolvedValue();
     const deleteMeetingSpy = jest.spyOn(zoomService, "deleteMeeting").mockResolvedValue();
 
-    const ev = await prisma.eventType.create({
+    await prisma.eventType.create({
       data: {
         userId: host.user.id,
         title: "Lifecycle Event",
