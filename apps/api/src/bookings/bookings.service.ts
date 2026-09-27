@@ -66,6 +66,24 @@ export class BookingsService {
       throw new NotFoundError();
     }
 
+    // Verify host Zoom integration is active if this event type requires Zoom
+    if (eventType.locationType === LocationType.ZOOM) {
+      const zoomIntegration = await this.prisma.zoomIntegration.findUnique({
+        where: { userId: eventType.userId },
+      });
+      if (
+        !zoomIntegration ||
+        zoomIntegration.status !== "CONNECTED" ||
+        !zoomIntegration.encryptedAccessToken ||
+        !zoomIntegration.encryptedRefreshToken
+      ) {
+        throw new BadRequestError(
+          "ZOOM_NOT_CONNECTED",
+          "The host has not connected their Zoom account or the integration is inactive. This meeting cannot be booked at this time."
+        );
+      }
+    }
+
     // Phone validation for HOST_CALLS_ATTENDEE
     let attendeePhone = dto.attendeePhoneNumber?.trim() || null;
     if (eventType.locationType === LocationType.HOST_CALLS_ATTENDEE) {
@@ -211,6 +229,27 @@ export class BookingsService {
     const bufferedStart = new Date(startUtc.getTime() - eventType.beforeBufferMinutes * 60 * 1000);
     const bufferedEnd = new Date(endUtc.getTime() + eventType.afterBufferMinutes * 60 * 1000);
 
+    let bookingLocationData = eventType.locationData ?? undefined;
+    let createdZoomMeetingId: string | null = null;
+
+    if (eventType.locationType === LocationType.ZOOM) {
+      const zoomMeeting = await this.zoomService.createMeeting(eventType.userId, {
+        topic: `${eventType.title} - ${dto.attendeeName} & ${eventType.user.name}`,
+        startTime: startUtc,
+        durationMinutes: eventType.durationMinutes,
+        timezone: eventType.user.timezone || dto.attendeeTimeZone || "UTC",
+      });
+      createdZoomMeetingId = zoomMeeting.meetingId;
+      bookingLocationData = {
+        type: "ZOOM",
+        joinUrl: zoomMeeting.joinUrl,
+        startUrl: zoomMeeting.startUrl,
+        meetingId: zoomMeeting.meetingId,
+        password: zoomMeeting.password,
+        extraNotes: (eventType.locationData as Record<string, unknown> | null)?.extraNotes || undefined,
+      };
+    }
+
     try {
       const booking = await this.prisma.$transaction(async (tx) => {
         // In-band check for collision (including custom buffer minutes)
@@ -228,29 +267,6 @@ export class BookingsService {
             "SLOT_ALREADY_BOOKED",
             "This time slot has already been booked by someone else."
           );
-        }
-
-        let bookingLocationData = eventType.locationData ?? undefined;
-
-        if (eventType.locationType === LocationType.ZOOM) {
-          try {
-            const zoomMeeting = await this.zoomService.createMeeting(eventType.userId, {
-              topic: `${eventType.title} - ${dto.attendeeName} & ${eventType.user.name}`,
-              startTime: startUtc,
-              durationMinutes: eventType.durationMinutes,
-              timezone: eventType.user.timezone || dto.attendeeTimeZone || "UTC",
-            });
-            bookingLocationData = {
-              type: "ZOOM",
-              joinUrl: zoomMeeting.joinUrl,
-              startUrl: zoomMeeting.startUrl,
-              meetingId: zoomMeeting.meetingId,
-              password: zoomMeeting.password,
-              extraNotes: (eventType.locationData as Record<string, unknown> | null)?.extraNotes || undefined,
-            };
-          } catch (zoomErr) {
-            this.logger.warn(`Could not create dynamic Zoom meeting: ${zoomErr instanceof Error ? zoomErr.message : zoomErr}`);
-          }
         }
 
         const created = await tx.booking.create({
@@ -309,6 +325,15 @@ export class BookingsService {
         manageToken,
       };
     } catch (error: unknown) {
+      // Compensating action: If Zoom meeting was created but database transaction failed, delete the orphaned Zoom meeting
+      if (createdZoomMeetingId) {
+        try {
+          await this.zoomService.deleteMeeting(eventType.userId, createdZoomMeetingId);
+        } catch (cleanupErr) {
+          this.logger.warn(`Failed to cleanup orphaned Zoom meeting ${createdZoomMeetingId}: ${cleanupErr}`);
+        }
+      }
+
       const dbErr = error as { code?: string };
       if (dbErr?.code === "23P01" || dbErr?.code === "P2002") {
         throw new ConflictError(
@@ -612,14 +637,40 @@ export class BookingsService {
       }, { maxWait: 15000, timeout: 25000 });
 
       // Asynchronously update dynamic Zoom meeting schedule if connected
-      if (updated.locationType === LocationType.ZOOM && updated.locationData) {
-        const locData = updated.locationData as Record<string, unknown>;
+      if (updated.locationType === LocationType.ZOOM) {
+        const locData = updated.locationData as Record<string, unknown> | null;
         if (locData?.meetingId) {
           void this.zoomService.updateMeeting(updated.hostId, String(locData.meetingId), {
             startTime: startUtc,
             durationMinutes: updated.eventType.durationMinutes,
             timezone: updated.host.timezone || updated.attendeeTimeZone || "UTC",
           });
+        } else {
+          void (async () => {
+            try {
+              const newMeeting = await this.zoomService.createMeeting(updated.hostId, {
+                topic: `${updated.eventType.title} - ${updated.attendeeName} & ${updated.host.name}`,
+                startTime: startUtc,
+                durationMinutes: updated.eventType.durationMinutes,
+                timezone: updated.host.timezone || updated.attendeeTimeZone || "UTC",
+              });
+              await this.prisma.booking.update({
+                where: { id: updated.id },
+                data: {
+                  locationData: {
+                    type: "ZOOM",
+                    joinUrl: newMeeting.joinUrl,
+                    startUrl: newMeeting.startUrl,
+                    meetingId: newMeeting.meetingId,
+                    password: newMeeting.password,
+                    extraNotes: locData?.extraNotes || undefined,
+                  } as unknown as Prisma.InputJsonValue,
+                },
+              });
+            } catch (err) {
+              this.logger.warn(`Could not create replacement Zoom meeting on reschedule: ${err}`);
+            }
+          })();
         }
       }
 

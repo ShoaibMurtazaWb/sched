@@ -117,6 +117,13 @@ export function generateIcsCalendar(event: IcsEventOptions): string {
         }
         break;
       }
+      case "ZOOM": {
+        if (typeof data.joinUrl === "string") {
+          locationStr = data.joinUrl;
+          urlStr = data.joinUrl;
+        }
+        break;
+      }
     }
   }
 

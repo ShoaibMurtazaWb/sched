@@ -380,6 +380,20 @@ export default function PublicBookingConfirmationPage({
                   {locationIcon}
                   <span>{locationContent}</span>
                 </div>
+
+                {booking.location?.type === "ZOOM" && Boolean(booking.location.data?.joinUrl) && !isCancelled && !isPast && (
+                  <div className="pt-2 border-t border-neutral-100">
+                    <a
+                      href={String(booking.location.data.joinUrl)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-[#2D8CFF] hover:bg-blue-600 text-white font-semibold text-xs transition-colors shadow-2xs cursor-pointer"
+                    >
+                      <ZoomLogo className="h-4 w-4" />
+                      <span>Join Zoom Meeting</span>
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -115,6 +115,19 @@ function renderLocationHtml(snapshot: SnapshotPayload, recipient: "ATTENDEE" | "
       const safeUrl = escapeHtml(url);
       return `<div class="details-row"><span class="details-label">Meeting Link:</span><span class="details-value"><a href="${safeUrl}" style="color: #2563eb; text-decoration: underline;" target="_blank" rel="noopener noreferrer">${safeUrl}</a>${safeNotes}</span></div>`;
     }
+    case "ZOOM": {
+      const joinUrl = typeof data.joinUrl === "string" ? data.joinUrl : "";
+      const safeJoinUrl = escapeHtml(joinUrl);
+      const meetingId = typeof data.meetingId === "string" ? escapeHtml(data.meetingId) : "";
+      const passcode = typeof data.password === "string" ? escapeHtml(data.password) : "";
+      const details = [
+        meetingId ? `Meeting ID: ${meetingId}` : "",
+        passcode ? `Passcode: ${passcode}` : "",
+      ].filter(Boolean).join(" &bull; ");
+      const extraInfo = details ? `<br><small style="color: #64748b;">${details}</small>` : "";
+
+      return `<div class="details-row"><span class="details-label">Zoom Meeting:</span><span class="details-value"><a href="${safeJoinUrl}" style="color: #2563eb; font-weight: 600; text-decoration: underline;" target="_blank" rel="noopener noreferrer">${safeJoinUrl || "Zoom link generated"}</a>${extraInfo}${safeNotes}</span></div>`;
+    }
     default:
       return "";
   }
@@ -147,6 +160,12 @@ function renderLocationText(snapshot: SnapshotPayload, recipient: "ATTENDEE" | "
     case "CUSTOM_LINK":
     case "STATIC_VIDEO": {
       return `Meeting Link: ${data.url || ""}${extraNotes}\n`;
+    }
+    case "ZOOM": {
+      const joinUrl = data.joinUrl || "";
+      const meetingId = data.meetingId ? ` (Meeting ID: ${data.meetingId})` : "";
+      const passcode = data.password ? ` (Passcode: ${data.password})` : "";
+      return `Zoom Meeting: ${joinUrl}${meetingId}${passcode}${extraNotes}\n`;
     }
     default:
       return "";
@@ -270,6 +289,7 @@ export function renderBookingConfirmedAttendee(
   const locationText = renderLocationText(snapshot, "ATTENDEE");
   const customResponsesHtml = renderCustomResponsesHtml(snapshot);
   const customResponsesText = renderCustomResponsesText(snapshot);
+  const zoomJoinUrl = snapshot.locationType === "ZOOM" && typeof snapshot.locationData?.joinUrl === "string" ? snapshot.locationData.joinUrl : null;
 
   const html = baseHtml(`
     <div style="text-align: center; margin-bottom: 20px;">
@@ -294,7 +314,8 @@ export function renderBookingConfirmedAttendee(
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${manageUrl}" class="btn">View Booking Details</a>
+      ${zoomJoinUrl ? `<a href="${escapeHtml(zoomJoinUrl)}" class="btn" style="background-color: #2D8CFF; margin-right: 8px; margin-bottom: 8px;" target="_blank" rel="noopener noreferrer">Join Zoom Meeting</a>` : ""}
+      <a href="${manageUrl}" class="btn" ${zoomJoinUrl ? 'style="background-color: #475569;"' : ""}>View Booking Details</a>
     </div>
 
     <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px;">
@@ -338,6 +359,7 @@ export function renderBookingConfirmedHost(
   const locationText = renderLocationText(snapshot, "HOST");
   const customResponsesHtml = renderCustomResponsesHtml(snapshot);
   const customResponsesText = renderCustomResponsesText(snapshot);
+  const zoomJoinUrl = snapshot.locationType === "ZOOM" && typeof snapshot.locationData?.joinUrl === "string" ? snapshot.locationData.joinUrl : null;
 
   const html = baseHtml(`
     <div style="text-align: center; margin-bottom: 20px;">
@@ -362,7 +384,8 @@ export function renderBookingConfirmedHost(
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${dashboardUrl}" class="btn">View in Dashboard</a>
+      ${zoomJoinUrl ? `<a href="${escapeHtml(zoomJoinUrl)}" class="btn" style="background-color: #2D8CFF; margin-right: 8px; margin-bottom: 8px;" target="_blank" rel="noopener noreferrer">Join Zoom Meeting</a>` : ""}
+      <a href="${dashboardUrl}" class="btn" ${zoomJoinUrl ? 'style="background-color: #475569;"' : ""}>View in Dashboard</a>
     </div>
   `);
 
@@ -409,6 +432,7 @@ export function renderBookingRescheduledAttendee(
   const safeReason = snapshot.rescheduleReason ? escapeHtml(snapshot.rescheduleReason) : "";
   const locationHtml = renderLocationHtml(snapshot, "ATTENDEE");
   const locationText = renderLocationText(snapshot, "ATTENDEE");
+  const zoomJoinUrl = snapshot.locationType === "ZOOM" && typeof snapshot.locationData?.joinUrl === "string" ? snapshot.locationData.joinUrl : null;
 
   const html = baseHtml(`
     <div style="text-align: center; margin-bottom: 20px;">
@@ -436,7 +460,8 @@ export function renderBookingRescheduledAttendee(
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${manageUrl}" class="btn">View Updated Details</a>
+      ${zoomJoinUrl ? `<a href="${escapeHtml(zoomJoinUrl)}" class="btn" style="background-color: #2D8CFF; margin-right: 8px; margin-bottom: 8px;" target="_blank" rel="noopener noreferrer">Join Zoom Meeting</a>` : ""}
+      <a href="${manageUrl}" class="btn" ${zoomJoinUrl ? 'style="background-color: #475569;"' : ""}>View Updated Details</a>
     </div>
 
     <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px;">
@@ -487,6 +512,7 @@ export function renderBookingRescheduledHost(
   const safeReason = snapshot.rescheduleReason ? escapeHtml(snapshot.rescheduleReason) : "";
   const locationHtml = renderLocationHtml(snapshot, "HOST");
   const locationText = renderLocationText(snapshot, "HOST");
+  const hostZoomJoinUrl = snapshot.locationType === "ZOOM" && typeof snapshot.locationData?.joinUrl === "string" ? snapshot.locationData.joinUrl : null;
 
   const html = baseHtml(`
     <div style="text-align: center; margin-bottom: 20px;">
@@ -514,7 +540,8 @@ export function renderBookingRescheduledHost(
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${dashboardUrl}" class="btn">View in Dashboard</a>
+      ${hostZoomJoinUrl ? `<a href="${escapeHtml(hostZoomJoinUrl)}" class="btn" style="background-color: #2D8CFF; margin-right: 8px; margin-bottom: 8px;" target="_blank" rel="noopener noreferrer">Join Zoom Meeting</a>` : ""}
+      <a href="${dashboardUrl}" class="btn" ${hostZoomJoinUrl ? 'style="background-color: #475569;"' : ""}>View in Dashboard</a>
     </div>
   `);
 

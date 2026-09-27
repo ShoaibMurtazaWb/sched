@@ -223,9 +223,16 @@ export class CalendarSyncProcessor implements OnModuleInit, OnModuleDestroy {
       // Confirmed / Rescheduled synchronization
       const location = parseBookingLocation(booking.locationType, booking.locationData);
       let locationStr: string | undefined;
+      let zoomDetails = "";
+
       if (location?.data) {
         const d = location.data as Record<string, unknown>;
-        if (typeof d["address"] === "string" && d["address"]) {
+        if (typeof d["joinUrl"] === "string" && d["joinUrl"]) {
+          locationStr = d["joinUrl"];
+          zoomDetails = `\n\nJoin Zoom Meeting: ${d["joinUrl"]}`;
+          if (d["meetingId"]) zoomDetails += `\nMeeting ID: ${d["meetingId"]}`;
+          if (d["password"]) zoomDetails += `\nPasscode: ${d["password"]}`;
+        } else if (typeof d["address"] === "string" && d["address"]) {
           locationStr = d["address"];
         } else if (typeof d["customUrl"] === "string" && d["customUrl"]) {
           locationStr = d["customUrl"];
@@ -247,7 +254,7 @@ export class CalendarSyncProcessor implements OnModuleInit, OnModuleDestroy {
           title: booking.eventType.title,
           description: `Booking with ${booking.attendeeName} (${booking.attendeeEmail})\n\nNotes: ${
             booking.attendeeNotes || "None"
-          }`,
+          }${zoomDetails}`,
           location: locationStr,
           startTime: booking.startTime,
           endTime: booking.endTime,

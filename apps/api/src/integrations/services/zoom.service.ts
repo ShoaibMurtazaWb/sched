@@ -315,9 +315,31 @@ export class ZoomService {
       return this.cryptoVault.decrypt(integration.encryptedAccessToken);
     }
 
-    // Refresh token
+    return this.refreshAccessToken(userId, integration.encryptedRefreshToken);
+  }
+
+  /**
+   * Force refreshes the user's Zoom OAuth access token.
+   */
+  async forceRefreshAccessToken(userId: string): Promise<string> {
+    const integration = await this.prisma.zoomIntegration.findUnique({
+      where: { userId },
+    });
+
+    if (
+      !integration ||
+      integration.status !== ZoomIntegrationStatus.CONNECTED ||
+      !integration.encryptedRefreshToken
+    ) {
+      throw new BadRequestError("ZOOM_NOT_CONNECTED", "Host has not connected a valid Zoom account.");
+    }
+
+    return this.refreshAccessToken(userId, integration.encryptedRefreshToken);
+  }
+
+  private async refreshAccessToken(userId: string, encryptedRefreshToken: string): Promise<string> {
     this.logger.log(`Refreshing Zoom OAuth access token for user ${userId}...`);
-    const refreshToken = this.cryptoVault.decrypt(integration.encryptedRefreshToken);
+    const refreshToken = this.cryptoVault.decrypt(encryptedRefreshToken);
     const basicAuth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString("base64");
 
     const refreshBody = new URLSearchParams({
@@ -343,7 +365,10 @@ export class ZoomService {
         data: { status: ZoomIntegrationStatus.REVOKED },
       });
 
-      throw new BadRequestError("ZOOM_AUTH_REVOKED", "Zoom authorization expired or was revoked. Please reconnect.");
+      throw new BadRequestError(
+        "ZOOM_AUTH_REVOKED",
+        "Host's Zoom authorization expired or was revoked. Please reconnect Zoom."
+      );
     }
 
     const refreshData = (await refreshRes.json()) as {
@@ -381,7 +406,7 @@ export class ZoomService {
       timezone: string;
     }
   ): Promise<DynamicZoomMeeting> {
-    const accessToken = await this.getValidAccessToken(userId);
+    let accessToken = await this.getValidAccessToken(userId);
 
     const body = {
       topic: params.topic,
@@ -398,7 +423,7 @@ export class ZoomService {
       },
     };
 
-    const res = await fetch("https://api.zoom.us/v2/users/me/meetings", {
+    let res = await fetch("https://api.zoom.us/v2/users/me/meetings", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -407,10 +432,26 @@ export class ZoomService {
       body: JSON.stringify(body),
     });
 
+    if (res.status === 401) {
+      this.logger.warn(`Zoom createMeeting returned 401. Refreshing token for user ${userId}...`);
+      accessToken = await this.forceRefreshAccessToken(userId);
+      res = await fetch("https://api.zoom.us/v2/users/me/meetings", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+    }
+
     if (!res.ok) {
       const errorText = await res.text();
       this.logger.error(`Failed to create Zoom meeting: ${res.status} ${errorText}`);
-      throw new BadRequestError("ZOOM_MEETING_CREATION_FAILED", "Failed to dynamically create Zoom meeting room.");
+      throw new BadRequestError(
+        "ZOOM_MEETING_CREATION_FAILED",
+        "Failed to dynamically create Zoom meeting room with host's account."
+      );
     }
 
     const data = (await res.json()) as {
@@ -443,7 +484,7 @@ export class ZoomService {
     }
   ): Promise<void> {
     try {
-      const accessToken = await this.getValidAccessToken(userId);
+      let accessToken = await this.getValidAccessToken(userId);
 
       const body = {
         start_time: params.startTime.toISOString(),
@@ -451,7 +492,7 @@ export class ZoomService {
         timezone: params.timezone || "UTC",
       };
 
-      const res = await fetch(`https://api.zoom.us/v2/meetings/${meetingId}`, {
+      let res = await fetch(`https://api.zoom.us/v2/meetings/${meetingId}`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -459,6 +500,18 @@ export class ZoomService {
         },
         body: JSON.stringify(body),
       });
+
+      if (res.status === 401) {
+        accessToken = await this.forceRefreshAccessToken(userId);
+        res = await fetch(`https://api.zoom.us/v2/meetings/${meetingId}`, {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+      }
 
       if (!res.ok && res.status !== 204) {
         const errorText = await res.text();
@@ -476,14 +529,24 @@ export class ZoomService {
    */
   async deleteMeeting(userId: string, meetingId: string): Promise<void> {
     try {
-      const accessToken = await this.getValidAccessToken(userId);
+      let accessToken = await this.getValidAccessToken(userId);
 
-      const res = await fetch(`https://api.zoom.us/v2/meetings/${meetingId}`, {
+      let res = await fetch(`https://api.zoom.us/v2/meetings/${meetingId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       });
+
+      if (res.status === 401) {
+        accessToken = await this.forceRefreshAccessToken(userId);
+        res = await fetch(`https://api.zoom.us/v2/meetings/${meetingId}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+      }
 
       if (!res.ok && res.status !== 204 && res.status !== 404) {
         const errorText = await res.text();

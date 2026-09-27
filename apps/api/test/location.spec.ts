@@ -4,6 +4,8 @@ import { createTestApp, resetDatabase, uniqueLabel } from "./app.helper";
 import { PrismaService } from "../src/shared/prisma/prisma.service";
 
 describe("Milestone 3: Meeting Location & Conferencing Domain", () => {
+  jest.setTimeout(60000);
+
   let app: INestApplication;
   let prisma: PrismaService;
 

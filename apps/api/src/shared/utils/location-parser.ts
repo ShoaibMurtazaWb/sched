@@ -55,9 +55,11 @@ export function parseBookingLocation(
   if (!type) return null;
 
   if (type === LocationType.ZOOM && data && typeof data === "object") {
+    const raw = data as Record<string, unknown>;
+    const { startUrl: _startUrl, ...safeData } = raw;
     return {
       type: "ZOOM",
-      data: data as Record<string, unknown>,
+      data: safeData,
     };
   }
 
