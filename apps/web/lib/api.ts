@@ -69,6 +69,17 @@ async function parseBody(response: Response): Promise<unknown> {
   return JSON.parse(text) as unknown;
 }
 
+export const API_BASE_URL = (
+  typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "")
+    : ""
+);
+
+export function apiUrl(path: string): string {
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE_URL}/api/v1${cleanPath}`;
+}
+
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !headers.has("Content-Type")) {
@@ -77,7 +88,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   let response: Response;
   try {
-    response = await fetch(`/api/v1${path}`, {
+    response = await fetch(apiUrl(path), {
       ...init,
       headers,
       credentials: "include",

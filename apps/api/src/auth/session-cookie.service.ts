@@ -16,10 +16,12 @@ export class SessionCookieService {
   }
 
   private options(): CookieOptions {
-    const secure = this.config.get<string>("COOKIE_SECURE") === "true" || this.config.get("NODE_ENV") === "production";
+    const isProduction = this.config.get("NODE_ENV") === "production";
+    const secure = this.config.get<string>("COOKIE_SECURE") === "true" || isProduction;
+    const sameSite = (this.config.get<string>("COOKIE_SAME_SITE") as "none" | "lax" | "strict") || (secure ? "none" : "lax");
     return {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite,
       secure,
       path: "/",
       maxAge: SESSION_TTL_MS,

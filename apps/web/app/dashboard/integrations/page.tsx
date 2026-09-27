@@ -20,7 +20,7 @@ import { GoogleCalendarLogo } from "@/components/google-calendar-logo";
 import { ZoomLogo } from "@/components/zoom-logo";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { api } from "@/lib/api";
+import { api, apiUrl } from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import type {
   CalendarIntegrationResponse,
@@ -179,14 +179,14 @@ function IntegrationsContent() {
   function handleConnect() {
     setIsConnecting(true);
     setFeedback(null);
-    window.location.href = "/api/v1/integrations/google/connect";
+    window.location.href = apiUrl("/integrations/google/connect");
   }
 
   // Connect / Reconnect Zoom
   function handleConnectZoom() {
     setIsZoomConnecting(true);
     setFeedback(null);
-    window.location.href = "/api/v1/integrations/zoom/connect";
+    window.location.href = apiUrl("/integrations/zoom/connect");
   }
 
   // Disconnect Zoom
