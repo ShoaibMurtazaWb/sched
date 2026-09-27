@@ -13,7 +13,6 @@ import {
   Plus,
   Trash2,
   AlertCircle,
-  Eye,
   Mail,
   Calendar,
   Clock,
@@ -27,6 +26,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { api, apiUrl, type CurrentUser, type EventType } from "@/lib/api";
 import { ApiError, fieldErrors } from "@/lib/api-error";
+import { useScrollLock } from "@/lib/use-scroll-lock";
 import type { LocationType, CustomQuestion, ScheduleResponse, ZoomIntegrationResponse } from "@sched/api-contract";
 
 const DURATION_PRESETS = [15, 30, 45, 60];
@@ -79,15 +79,18 @@ export function EventTypeDrawer({
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Accordion Section States
+  // Accordion Section States - questions expanded by default so section is clearly visible
   const [openSections, setOpenSections] = useState({
     duration: true,
     location: true,
     description: true,
     availability: true,
     host: true,
-    questions: false,
+    questions: true,
   });
+
+  // Lock background body scroll when drawer overlay is open
+  useScrollLock(isOpen);
 
   // Form Fields
   const [title, setTitle] = useState("");
@@ -239,7 +242,7 @@ export function EventTypeDrawer({
     }
   }
 
-  function handleAddQuestion(type: "TEXT" | "TEXTAREA" | "SELECT" | "CHECKBOX") {
+  function handleAddQuestion(type: "TEXT" | "TEXTAREA" | "SELECT") {
     const id = crypto.randomUUID();
     if (type === "SELECT") {
       setCustomQuestions((prev) => [
@@ -256,16 +259,6 @@ export function EventTypeDrawer({
           ],
         },
       ]);
-    } else if (type === "CHECKBOX") {
-      setCustomQuestions((prev) => [
-        ...prev,
-        {
-          id,
-          type: "CHECKBOX",
-          label: "I agree to the requirements",
-          required: false,
-        },
-      ]);
     } else {
       setCustomQuestions((prev) => [
         ...prev,
@@ -274,7 +267,6 @@ export function EventTypeDrawer({
           type,
           label: "",
           required: false,
-          placeholder: "",
         },
       ]);
     }
@@ -413,51 +405,42 @@ export function EventTypeDrawer({
     }
   }
 
-  const effectiveSlug = (slug || generateSlug(title)).trim() || "meeting";
-  const publicPreviewUrl =
-    user && effectiveSlug ? `/public/${user.username}/${effectiveSlug}` : null;
-
   return (
     <>
-      {/* Mobile Backdrop */}
+      {/* Full Backdrop Overlay on Desktop and Mobile */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden backdrop-blur-xs transition-opacity duration-300"
+          className="fixed inset-0 bg-black/40 z-40 backdrop-blur-xs transition-opacity duration-300"
           onClick={onClose}
         />
       )}
 
+      {/* Slide-over Drawer with contained scrolling */}
       <div
-        className={`fixed inset-y-0 right-0 z-50 lg:static lg:z-auto transition-[width,opacity] duration-500 ease-in-out shrink-0 ${
-          isOpen
-            ? "w-full sm:w-[460px] lg:w-[480px] opacity-100 pointer-events-auto"
-            : "w-0 opacity-0 pointer-events-none"
+        className={`fixed inset-y-0 right-0 z-50 transition-transform duration-300 ease-in-out w-full sm:w-[500px] md:w-[540px] max-w-full ${
+          isOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
         }`}
       >
-        <aside
-          className={`w-full h-full lg:rounded-2xl border-l lg:border border-neutral-200 bg-white shadow-2xl lg:shadow-xl flex flex-col min-h-screen lg:min-h-[600px] lg:max-h-[calc(100vh-8rem)] lg:sticky lg:top-6 transition-transform duration-500 ease-in-out ${
-            isOpen ? "translate-x-0" : "translate-x-full"
-          }`}
-        >
+        <aside className="w-full h-full border-l border-neutral-200 bg-white shadow-2xl flex flex-col">
           {/* Drawer Top Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 sticky top-0 bg-white z-10 lg:rounded-t-2xl">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-              {eventTypeId ? "Edit Event Type" : "New Event Type"}
-            </span>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 sticky top-0 bg-white z-10 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                {eventTypeId ? "Edit Event Type" : "New Event Type"}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-8 w-8 flex items-center justify-center rounded-full text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer"
+              title="Close panel"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-8 w-8 flex items-center justify-center rounded-full text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer"
-            title="Close panel"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
 
-        {/* Drawer Scrollable Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+          {/* Drawer Scrollable Content - isolated scroll with overscroll-contain */}
+          <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-5 space-y-6">
           {/* Title Identity Header - Directly Editable in Real-time with Bolder Divider */}
           <div className="space-y-1 pb-5 border-b-2 border-neutral-300">
             <div className="flex items-center gap-2.5">
@@ -981,6 +964,15 @@ export function EventTypeDrawer({
                       Ask invitees additional questions when they book a meeting.
                     </p>
 
+                    {customQuestions.length === 0 && (
+                      <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50/50 p-4 text-center">
+                        <p className="text-xs text-neutral-600 font-medium">No custom questions added</p>
+                        <p className="text-[11px] text-neutral-400 mt-0.5">
+                          Invitees will always be asked for their Name and Email address. Add custom questions below if needed.
+                        </p>
+                      </div>
+                    )}
+
                     {customQuestions.map((q, idx) => (
                       <div
                         key={idx}
@@ -1100,7 +1092,7 @@ export function EventTypeDrawer({
                         variant="outline"
                         size="sm"
                         onClick={() => handleAddQuestion("TEXT")}
-                        className="rounded-full border-neutral-300 text-xs gap-1.5 h-7 px-3 cursor-pointer"
+                        className="rounded-full border-neutral-300 text-xs gap-1.5 h-7 px-3 cursor-pointer hover:border-neutral-400"
                       >
                         <Plus className="h-3 w-3 text-neutral-600" />
                         <span>Text</span>
@@ -1110,7 +1102,7 @@ export function EventTypeDrawer({
                         variant="outline"
                         size="sm"
                         onClick={() => handleAddQuestion("TEXTAREA")}
-                        className="rounded-full border-neutral-300 text-xs gap-1.5 h-7 px-3 cursor-pointer"
+                        className="rounded-full border-neutral-300 text-xs gap-1.5 h-7 px-3 cursor-pointer hover:border-neutral-400"
                       >
                         <Plus className="h-3 w-3 text-neutral-600" />
                         <span>Paragraph</span>
@@ -1120,20 +1112,10 @@ export function EventTypeDrawer({
                         variant="outline"
                         size="sm"
                         onClick={() => handleAddQuestion("SELECT")}
-                        className="rounded-full border-neutral-300 text-xs gap-1.5 h-7 px-3 cursor-pointer"
+                        className="rounded-full border-neutral-300 text-xs gap-1.5 h-7 px-3 cursor-pointer hover:border-neutral-400"
                       >
                         <Plus className="h-3 w-3 text-neutral-600" />
-                        <span>Select / Dropdown</span>
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAddQuestion("CHECKBOX")}
-                        className="rounded-full border-neutral-300 text-xs gap-1.5 h-7 px-3 cursor-pointer"
-                      >
-                        <Plus className="h-3 w-3 text-neutral-600" />
-                        <span>Checkbox</span>
+                        <span>Select</span>
                       </Button>
                     </div>
                   </div>
@@ -1143,56 +1125,38 @@ export function EventTypeDrawer({
           )}
         </div>
 
-        {/* Drawer Sticky Bottom Action Bar */}
-        <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-6 py-4 flex items-center justify-between gap-3 shrink-0 rounded-b-2xl">
-          <div>
-            {publicPreviewUrl ? (
-              <Link
-                href={publicPreviewUrl}
-                target="_blank"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-700 hover:text-black transition-colors"
-              >
-                <Eye className="h-3.5 w-3.5 text-neutral-500" />
-                <span>Preview</span>
-              </Link>
+        {/* Drawer Sticky Bottom Action Bar (Preview button removed) */}
+        <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0 z-10">
+          {locationType === "ZOOM" && isZoomConnected === false && (
+            <span className="text-xs text-amber-600 font-medium mr-auto hidden sm:inline">
+              Connect Zoom to continue
+            </span>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onClose}
+            className="rounded-full border-neutral-300 text-xs font-semibold px-4 cursor-pointer"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={isSaving || (locationType === "ZOOM" && isZoomConnected === false)}
+            onClick={handleSave}
+            className="rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-5 shadow-2xs gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            {isSaving ? (
+              <>
+                <Spinner size="sm" />
+                <span>Saving…</span>
+              </>
             ) : (
-              <span className="text-xs text-neutral-400">Preview</span>
+              <span>{eventTypeId ? "Save changes" : "Create event type"}</span>
             )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {locationType === "ZOOM" && isZoomConnected === false && (
-              <span className="text-xs text-amber-600 font-medium mr-1 hidden sm:inline">
-                Connect Zoom to continue
-              </span>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onClose}
-              className="rounded-full border-neutral-300 text-xs font-semibold px-4"
-            >
-              Cancel
-            </Button>
-
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => void handleSave()}
-              disabled={isSaving || !title.trim() || (locationType === "ZOOM" && isZoomConnected === false)}
-              className="rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-5 shadow-2xs gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSaving ? (
-                <>
-                  <Spinner size="sm" />
-                  <span>Saving…</span>
-                </>
-              ) : (
-                <span>{eventTypeId ? "Save changes" : "Create event"}</span>
-              )}
-            </Button>
-          </div>
+          </Button>
         </div>
       </aside>
     </div>

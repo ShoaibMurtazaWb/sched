@@ -24,6 +24,7 @@ import { toast } from "@/components/ui/toast";
 import { api, type CurrentUser, type EventType } from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { EventTypeDrawer } from "@/components/event-type-drawer";
+import { useScrollLock } from "@/lib/use-scroll-lock";
 
 function EventTypeListContent() {
   const searchParams = useSearchParams();
@@ -47,6 +48,9 @@ function EventTypeListContent() {
   // Delete Modal State
   const [deleteModalItem, setDeleteModalItem] = useState<EventType | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Lock background scroll when delete confirmation modal is open
+  useScrollLock(!!deleteModalItem);
 
   // Sync with URL query params (?new=true or ?edit=[id])
   useEffect(() => {
@@ -167,9 +171,9 @@ function EventTypeListContent() {
   }, [items, searchQuery]);
 
   return (
-    <div className="w-full flex flex-col lg:flex-row items-start gap-6 relative">
-      {/* Left/Main Content Section (Smoothly shrinks when Right Sidebar Drawer is open) */}
-      <div className="flex-1 min-w-0 w-full space-y-6 transition-all duration-500 ease-in-out">
+    <div className="w-full relative">
+      {/* Main Content Section */}
+      <div className="w-full space-y-6">
         {/* Calendly Secondary Header Row (Directly under Top Navbar) */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-2">
@@ -200,28 +204,14 @@ function EventTypeListContent() {
           </div>
         </div>
 
-        {/* Subtabs Bar - Horizontally scrollable without page overflow */}
+        {/* Subtabs Bar */}
         <div className="border-b border-neutral-200">
-          <div className="flex items-center gap-6 sm:gap-8 text-xs font-semibold overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap">
+          <div className="flex items-center text-xs font-semibold whitespace-nowrap">
             <button
               type="button"
               className="pb-3 border-b-2 border-blue-600 text-blue-600 font-bold shrink-0 transition-colors"
             >
               Event types
-            </button>
-            <button
-              type="button"
-              className="pb-3 border-b-2 border-transparent text-neutral-600 hover:text-neutral-900 shrink-0 transition-colors cursor-pointer"
-              onClick={() => toast.info("Single-use links", "Single-use links are coming soon to Sched.")}
-            >
-              Single-use links
-            </button>
-            <button
-              type="button"
-              className="pb-3 border-b-2 border-transparent text-neutral-600 hover:text-neutral-900 shrink-0 transition-colors cursor-pointer"
-              onClick={() => toast.info("Meeting polls", "Meeting polls are coming soon to Sched.")}
-            >
-              Meeting polls
             </button>
           </div>
         </div>
@@ -486,7 +476,7 @@ function EventTypeListContent() {
       {/* Custom Confirmation Popup Modal Matching Screenshot */}
       {deleteModalItem && (
         <div
-          className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-4 animate-in fade-in-0 duration-150"
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4 overflow-y-auto overscroll-contain backdrop-blur-xs animate-in fade-in-0 duration-150"
           onClick={() => {
             if (!isDeleting) setDeleteModalItem(null);
           }}

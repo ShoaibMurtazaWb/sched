@@ -197,7 +197,7 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
     }
   }
 
-  function handleAddQuestion(type: "TEXT" | "TEXTAREA" | "SELECT" | "CHECKBOX") {
+  function handleAddQuestion(type: "TEXT" | "TEXTAREA" | "SELECT") {
     if (type === "SELECT") {
       setCustomQuestions((prev) => [
         ...prev,
@@ -210,15 +210,6 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
             { label: "Option 1" },
             { label: "Option 2" },
           ],
-        },
-      ]);
-    } else if (type === "CHECKBOX") {
-      setCustomQuestions((prev) => [
-        ...prev,
-        {
-          type: "CHECKBOX",
-          label: "I agree to the terms and requirements",
-          required: false,
         },
       ]);
     } else {
@@ -827,7 +818,7 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
                     onClick={() => handleAddQuestion("TEXTAREA")}
                   >
                     <Plus className="h-3 w-3" />
-                    <span>Textarea</span>
+                    <span>Paragraph</span>
                   </Button>
                   <Button
                     type="button"
@@ -837,17 +828,7 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
                     onClick={() => handleAddQuestion("SELECT")}
                   >
                     <Plus className="h-3 w-3" />
-                    <span>Dropdown</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs gap-1"
-                    onClick={() => handleAddQuestion("CHECKBOX")}
-                  >
-                    <Plus className="h-3 w-3" />
-                    <span>Checkbox</span>
+                    <span>Select</span>
                   </Button>
                 </div>
               </div>
