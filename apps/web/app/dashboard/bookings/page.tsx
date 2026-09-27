@@ -22,9 +22,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { api, type CurrentUser } from "@/lib/api";
-import { ApiError } from "@/lib/api-error";
+import { ApiError, formatApiError } from "@/lib/api-error";
 import { BookingDetailDrawer } from "@/components/booking-detail-drawer";
-import type { BookingResponse, TimeSlot } from "@sched/api-contract";
+import type { BookingResponse, TimeSlot, RescheduleBookingBody } from "@sched/api-contract";
 
 type TabStatus = "upcoming" | "past" | "cancelled";
 
@@ -193,13 +193,16 @@ export default function BookingsPage() {
     if (!rescheduleModalBooking || !selectedSlot) return;
     setIsRescheduling(true);
     try {
+      const payload: RescheduleBookingBody = {
+        startUtc: selectedSlot.startUtc,
+        expectedSequence: rescheduleModalBooking.sequence,
+        timeZone: rescheduleModalBooking.host.timezone,
+        reason: rescheduleReason.trim() || undefined,
+      };
+
       await api<BookingResponse>(`/bookings/${rescheduleModalBooking.id}/reschedule`, {
         method: "PATCH",
-        body: JSON.stringify({
-          newStartUtc: selectedSlot.startUtc,
-          expectedSequence: rescheduleModalBooking.sequence,
-          reason: rescheduleReason || undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
       toast.success(
@@ -211,11 +214,10 @@ export default function BookingsPage() {
       setRescheduleReason("");
       void loadAllBookings();
     } catch (err) {
-      if (err instanceof ApiError) {
-        toast.error("Reschedule Failed", err.message);
-      } else {
-        toast.error("Reschedule Failed", "Could not reschedule to the chosen slot.");
-      }
+      toast.error(
+        "Reschedule Failed",
+        formatApiError(err, "Could not reschedule to the chosen slot.")
+      );
     } finally {
       setIsRescheduling(false);
     }

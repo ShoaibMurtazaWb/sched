@@ -50,14 +50,26 @@ export const cancelBookingBodySchema = z.object({
 
 export type CancelBookingBody = z.infer<typeof cancelBookingBodySchema>;
 
-export const rescheduleBookingBodySchema = z.object({
-  startUtc: z.string().datetime({ message: "startUtc must be a valid ISO 8601 UTC date-time string" }),
-  expectedSequence: z.number().int().min(0, "expectedSequence must be a non-negative integer"),
-  timeZone: z.string().trim().min(1, "Timezone is required").optional(),
-  reason: z.string().trim().max(500, "Reason cannot exceed 500 characters").optional(),
-});
+export const rescheduleBookingBodySchema = z
+  .object({
+    startUtc: z.string().datetime({ message: "startUtc must be a valid ISO 8601 UTC date-time string" }).optional(),
+    newStartUtc: z.string().datetime({ message: "startUtc must be a valid ISO 8601 UTC date-time string" }).optional(),
+    expectedSequence: z.number().int().min(0, "expectedSequence must be a non-negative integer"),
+    timeZone: z.string().trim().min(1, "Timezone is required").optional(),
+    reason: z.string().trim().max(500, "Reason cannot exceed 500 characters").optional(),
+  })
+  .refine((data) => Boolean(data.startUtc || data.newStartUtc), {
+    message: "startUtc must be a valid ISO 8601 UTC date-time string",
+    path: ["startUtc"],
+  })
+  .transform((data) => ({
+    startUtc: (data.startUtc ?? data.newStartUtc)!,
+    expectedSequence: data.expectedSequence,
+    timeZone: data.timeZone,
+    reason: data.reason,
+  }));
 
-export type RescheduleBookingBody = z.infer<typeof rescheduleBookingBodySchema>;
+export type RescheduleBookingBody = z.output<typeof rescheduleBookingBodySchema>;
 
 export const listBookingsQuerySchema = z.object({
   status: z.enum(["upcoming", "past", "cancelled", "all"]).optional().default("upcoming"),

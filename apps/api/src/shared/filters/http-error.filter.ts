@@ -16,6 +16,28 @@ function requestIdOf(request: Request): string {
   return header && header.length > 0 ? header : "unknown";
 }
 
+function isAppError(err: unknown): err is AppError {
+  return (
+    err instanceof AppError ||
+    (typeof err === "object" &&
+      err !== null &&
+      "code" in err &&
+      "httpStatus" in err &&
+      typeof (err as AppError).code === "string" &&
+      typeof (err as AppError).httpStatus === "number")
+  );
+}
+
+function isZodError(err: unknown): err is ZodError {
+  return (
+    err instanceof ZodError ||
+    (typeof err === "object" &&
+      err !== null &&
+      "issues" in err &&
+      Array.isArray((err as ZodError).issues))
+  );
+}
+
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
   private readonly logger = new StructuredLoggerService();
@@ -26,7 +48,7 @@ export class HttpErrorFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
     const requestId = requestIdOf(request);
 
-    if (exception instanceof AppError) {
+    if (isAppError(exception)) {
       const details = exception.details || {};
       this.logger.warn(`AppError: ${exception.code} - ${exception.message}`, "HttpErrorFilter", {
         code: exception.code,
@@ -49,7 +71,7 @@ export class HttpErrorFilter implements ExceptionFilter {
       return;
     }
 
-    if (exception instanceof ZodError) {
+    if (isZodError(exception)) {
       this.logger.warn("Validation error", "HttpErrorFilter", {
         code: "VALIDATION_ERROR",
         requestId,
