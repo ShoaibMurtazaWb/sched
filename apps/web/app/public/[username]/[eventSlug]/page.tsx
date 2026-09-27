@@ -27,6 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { Logo } from "@/components/logo";
+import { ZoomLogo } from "@/components/zoom-logo";
 import { TimezonePicker } from "@/components/timezone-picker";
 import { api, type CurrentUser } from "@/lib/api";
 import { ApiError, fieldErrors, getExistingBookingFromError } from "@/lib/api-error";
@@ -413,6 +414,12 @@ export default function PublicBookingPage({
                   {/* Location Badge */}
                   {eventDetails.location && (
                     <div className="flex items-center gap-2 text-xs font-medium text-neutral-700">
+                      {eventDetails.location.type === "ZOOM" && (
+                        <>
+                          <ZoomLogo className="h-4 w-4 shrink-0" />
+                          <span>Zoom Video (details provided upon confirmation)</span>
+                        </>
+                      )}
                       {eventDetails.location.type === "IN_PERSON" && (
                         <>
                           <MapPin className="h-4 w-4 text-neutral-500 shrink-0" />

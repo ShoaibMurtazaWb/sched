@@ -22,6 +22,7 @@ import {
   type EventTypeLocationConfig,
   type LocationType,
 } from "@sched/api-contract";
+import { ZoomLogo } from "@/components/zoom-logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -64,7 +65,7 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
   const [isSlugTouched, setIsSlugTouched] = useState(false);
 
   // Location state
-  const [locationType, setLocationType] = useState<LocationType>("STATIC_VIDEO");
+  const [locationType, setLocationType] = useState<LocationType>("ZOOM");
   const [inPersonAddress, setInPersonAddress] = useState("");
   const [displayPublicAddress, setDisplayPublicAddress] = useState(false);
   const [inPersonNotes, setInPersonNotes] = useState("");
@@ -116,6 +117,8 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
             setInPersonAddress(String(locData.address || ""));
             setDisplayPublicAddress(Boolean(locData.displayPublicAddress));
             setInPersonNotes(String(locData.extraNotes || ""));
+          } else if (data.location.type === "ZOOM") {
+            setVideoNotes(String(locData.extraNotes || ""));
           } else if (data.location.type === "STATIC_VIDEO") {
             setVideoUrl(String(locData.url || ""));
             setVideoNotes(String(locData.extraNotes || ""));
@@ -268,6 +271,13 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
 
   function buildLocationConfig(): EventTypeLocationConfig {
     switch (locationType) {
+      case "ZOOM":
+        return {
+          type: "ZOOM",
+          data: {
+            extraNotes: videoNotes || undefined,
+          },
+        };
       case "IN_PERSON":
         return {
           type: "IN_PERSON",
@@ -474,9 +484,15 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {[
                   {
+                    id: "ZOOM" as LocationType,
+                    label: "Zoom Video",
+                    desc: "Dynamic Zoom room",
+                    icon: ZoomLogo,
+                  },
+                  {
                     id: "STATIC_VIDEO" as LocationType,
-                    label: "Video Meeting",
-                    desc: "Zoom, Google Meet link",
+                    label: "Google Meet / Link",
+                    desc: "Static meeting room URL",
                     icon: Video,
                   },
                   {
@@ -527,6 +543,26 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
 
               {/* Conditional Sub-forms per Location Type */}
               <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)]/60 p-4 space-y-3 mt-2">
+                {locationType === "ZOOM" && (
+                  <div className="space-y-2 text-xs text-[var(--text-secondary)]">
+                    <div className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
+                      <ZoomLogo className="h-4 w-4 shrink-0" />
+                      <span>Zoom Video Integration</span>
+                    </div>
+                    <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                      Sched will automatically generate a dynamic, password-protected Zoom meeting for every confirmed booking. The unique join link, meeting ID, and passcode will be included directly in the invitee&apos;s email and calendar invite.
+                    </p>
+                    <div className="space-y-1 pt-1">
+                      <Label htmlFor="zoomNotes">Meeting Notes / Agenda (Optional)</Label>
+                      <Input
+                        id="zoomNotes"
+                        value={videoNotes}
+                        onChange={(e) => setVideoNotes(e.target.value)}
+                        placeholder="e.g. Please join prepared with your project outline."
+                      />
+                    </div>
+                  </div>
+                )}
                 {locationType === "IN_PERSON" && (
                   <>
                     <div className="space-y-1">

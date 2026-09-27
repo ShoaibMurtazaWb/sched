@@ -160,23 +160,32 @@ export function BookingDetailDrawer({
 
   // Determine video/meeting location details
   const isVideoLocation =
+    currentBooking.location?.type === "ZOOM" ||
     currentBooking.location?.type === "STATIC_VIDEO" ||
     currentBooking.location?.type === "CUSTOM_LINK" ||
     (!currentBooking.location && !currentBooking.attendeePhoneNumber);
 
   const locationLabel = currentBooking.location
-    ? currentBooking.location.type === "IN_PERSON"
+    ? currentBooking.location.type === "ZOOM"
+      ? "Zoom Video Meeting"
+      : currentBooking.location.type === "IN_PERSON"
       ? "In-Person Meeting"
       : currentBooking.location.type === "HOST_CALLS_ATTENDEE" || currentBooking.location.type === "ATTENDEE_CALLS_HOST"
       ? "Phone Call"
       : currentBooking.location.data?.url
-      ? "Zoom / Web Conference"
+      ? "Web Conference"
       : "Zoom"
     : currentBooking.attendeePhoneNumber
     ? "Phone Call"
     : "Zoom";
 
-  const joinUrl = currentBooking.location?.data?.url ? String(currentBooking.location.data.url) : `/public/bookings/${currentBooking.id}`;
+  const joinUrl = currentBooking.location?.data?.startUrl
+    ? String(currentBooking.location.data.startUrl)
+    : currentBooking.location?.data?.joinUrl
+    ? String(currentBooking.location.data.joinUrl)
+    : currentBooking.location?.data?.url
+    ? String(currentBooking.location.data.url)
+    : `/public/bookings/${currentBooking.id}`;
 
   return (
     <>
@@ -440,6 +449,16 @@ export function BookingDetailDrawer({
                       <span className="text-xs font-semibold text-neutral-900 truncate">
                         {locationLabel}
                       </span>
+                      {currentBooking.location?.type === "ZOOM" && (
+                        <div className="flex items-center gap-2 text-[11px] text-neutral-500">
+                          {Boolean(currentBooking.location.data?.meetingId) && (
+                            <span>ID: {String(currentBooking.location.data.meetingId)}</span>
+                          )}
+                          {Boolean(currentBooking.location.data?.password) && (
+                            <span>Passcode: {String(currentBooking.location.data.password)}</span>
+                          )}
+                        </div>
+                      )}
                       {currentBooking.location?.type === "IN_PERSON" && Boolean(currentBooking.location.data?.address) && (
                         <span className="text-[11px] text-neutral-500 truncate">
                           {String(currentBooking.location.data.address)}

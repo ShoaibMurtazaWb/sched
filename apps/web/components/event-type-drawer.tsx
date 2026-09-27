@@ -19,6 +19,7 @@ import {
   Calendar,
   Clock,
 } from "lucide-react";
+import { ZoomLogo } from "@/components/zoom-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,7 +98,7 @@ export function EventTypeDrawer({
   const [description, setDescription] = useState("");
 
   // Location Fields
-  const [locationType, setLocationType] = useState<LocationType>("STATIC_VIDEO");
+  const [locationType, setLocationType] = useState<LocationType>("ZOOM");
   const [inPersonAddress, setInPersonAddress] = useState("");
   const [displayPublicAddress, setDisplayPublicAddress] = useState(false);
   const [inPersonNotes, setInPersonNotes] = useState("");
@@ -136,7 +137,7 @@ export function EventTypeDrawer({
       setDuration(30);
       setCustomDuration("");
       setDescription("");
-      setLocationType("STATIC_VIDEO");
+      setLocationType("ZOOM");
       setInPersonAddress("");
       setDisplayPublicAddress(false);
       setInPersonNotes("");
@@ -179,6 +180,8 @@ export function EventTypeDrawer({
             setInPersonAddress(String(locData.address || ""));
             setDisplayPublicAddress(Boolean(locData.displayPublicAddress));
             setInPersonNotes(String(locData.extraNotes || ""));
+          } else if (data.location.type === "ZOOM") {
+            setVideoNotes(String(locData.extraNotes || ""));
           } else if (data.location.type === "STATIC_VIDEO") {
             setVideoUrl(String(locData.url || ""));
             setVideoNotes(String(locData.extraNotes || ""));
@@ -265,7 +268,11 @@ export function EventTypeDrawer({
 
     // Construct Location Payload
     let locationData: Record<string, unknown> = {};
-    if (locationType === "IN_PERSON") {
+    if (locationType === "ZOOM") {
+      locationData = {
+        extraNotes: videoNotes,
+      };
+    } else if (locationType === "IN_PERSON") {
       locationData = {
         address: inPersonAddress,
         displayPublicAddress,
@@ -472,8 +479,10 @@ export function EventTypeDrawer({
                   <div className="flex items-center gap-2">
                     <span>Location</span>
                     <span className="text-xs font-normal text-neutral-500">
-                      {locationType === "STATIC_VIDEO"
+                      {locationType === "ZOOM"
                         ? "Zoom"
+                        : locationType === "STATIC_VIDEO"
+                        ? "Video link"
                         : locationType === "HOST_CALLS_ATTENDEE" || locationType === "ATTENDEE_CALLS_HOST"
                         ? "Phone call"
                         : locationType === "IN_PERSON"
@@ -493,6 +502,22 @@ export function EventTypeDrawer({
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
+                        onClick={() => setLocationType("ZOOM")}
+                        className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
+                          locationType === "ZOOM"
+                            ? "border-blue-600 bg-blue-50/60 text-blue-700 shadow-2xs"
+                            : "border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50"
+                        }`}
+                      >
+                        <ZoomLogo className="h-4 w-4 shrink-0" />
+                        <div>
+                          <div className="font-bold">Zoom</div>
+                          <div className="text-[10px] text-neutral-500 font-normal">Dynamic meeting room</div>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={() => setLocationType("STATIC_VIDEO")}
                         className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
                           locationType === "STATIC_VIDEO"
@@ -502,8 +527,8 @@ export function EventTypeDrawer({
                       >
                         <Video className="h-4 w-4 shrink-0 text-blue-600" />
                         <div>
-                          <div className="font-bold">Zoom</div>
-                          <div className="text-[10px] text-neutral-500 font-normal">Video conferencing</div>
+                          <div className="font-bold">Google Meet / URL</div>
+                          <div className="text-[10px] text-neutral-500 font-normal">Static meeting link</div>
                         </div>
                       </button>
 
@@ -542,7 +567,7 @@ export function EventTypeDrawer({
                       <button
                         type="button"
                         onClick={() => setLocationType("CUSTOM_LINK")}
-                        className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
+                        className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer col-span-2 ${
                           locationType === "CUSTOM_LINK"
                             ? "border-blue-600 bg-blue-50/60 text-blue-700 shadow-2xs"
                             : "border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50"
@@ -557,15 +582,31 @@ export function EventTypeDrawer({
                     </div>
 
                     {/* Contextual Location Inputs */}
-                    {locationType === "STATIC_VIDEO" && (
+                    {locationType === "ZOOM" && (
                       <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-100 text-xs text-blue-900 space-y-1 pt-2">
                         <div className="flex items-center gap-2 font-semibold text-blue-800">
-                          <Video className="h-4 w-4 text-blue-600 shrink-0" />
-                          <span>Zoom web conference</span>
+                          <ZoomLogo className="h-4 w-4 shrink-0" />
+                          <span>Zoom Video Integration</span>
                         </div>
                         <p className="text-[11px] text-blue-700 leading-relaxed font-normal">
                           Sched will automatically generate a dynamic Zoom meeting and include the unique join link in the calendar invite and confirmation email upon booking.
                         </p>
+                      </div>
+                    )}
+
+                    {locationType === "STATIC_VIDEO" && (
+                      <div className="space-y-1.5 pt-1">
+                        <Label htmlFor="drawer-video-url" className="text-xs font-semibold text-neutral-800">
+                          Static Video Meeting URL
+                        </Label>
+                        <Input
+                          id="drawer-video-url"
+                          type="url"
+                          value={videoUrl}
+                          onChange={(e) => setVideoUrl(e.target.value)}
+                          placeholder="https://meet.google.com/abc-defg-hij"
+                          className="h-9 text-xs rounded-xl border-neutral-300 focus:border-blue-600"
+                        />
                       </div>
                     )}
 

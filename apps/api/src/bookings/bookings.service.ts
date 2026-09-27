@@ -14,6 +14,7 @@ import type {
 } from "@sched/api-contract";
 import { phoneSchema } from "@sched/api-contract";
 import { GoogleCalendarService } from "../integrations/services/google-calendar.service";
+import { ZoomService } from "../integrations/services/zoom.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import {
   BadRequestError,
@@ -43,7 +44,8 @@ export class BookingsService {
     private readonly slots: SlotsService,
     private readonly notifications: NotificationsService,
     private readonly tokenService: BookingTokenService,
-    private readonly googleCalendar: GoogleCalendarService
+    private readonly googleCalendar: GoogleCalendarService,
+    private readonly zoomService: ZoomService
   ) {}
 
   async createBooking(
@@ -228,6 +230,29 @@ export class BookingsService {
           );
         }
 
+        let bookingLocationData = eventType.locationData ?? undefined;
+
+        if (eventType.locationType === LocationType.ZOOM) {
+          try {
+            const zoomMeeting = await this.zoomService.createMeeting(eventType.userId, {
+              topic: `${eventType.title} - ${dto.attendeeName} & ${eventType.user.name}`,
+              startTime: startUtc,
+              durationMinutes: eventType.durationMinutes,
+              timezone: eventType.user.timezone || dto.attendeeTimeZone || "UTC",
+            });
+            bookingLocationData = {
+              type: "ZOOM",
+              joinUrl: zoomMeeting.joinUrl,
+              startUrl: zoomMeeting.startUrl,
+              meetingId: zoomMeeting.meetingId,
+              password: zoomMeeting.password,
+              extraNotes: (eventType.locationData as Record<string, unknown> | null)?.extraNotes || undefined,
+            };
+          } catch (zoomErr) {
+            this.logger.warn(`Could not create dynamic Zoom meeting: ${zoomErr instanceof Error ? zoomErr.message : zoomErr}`);
+          }
+        }
+
         const created = await tx.booking.create({
           data: {
             eventTypeId: eventType.id,
@@ -243,7 +268,7 @@ export class BookingsService {
             attendeePhoneNumber: attendeePhone,
             attendeeNotes: dto.attendeeNotes ?? "",
             locationType: eventType.locationType,
-            locationData: eventType.locationData ?? undefined,
+            locationData: (bookingLocationData as unknown as Prisma.InputJsonValue) ?? undefined,
             customResponses:
               customResponses.length > 0 ? (customResponses as unknown as Prisma.InputJsonValue) : undefined,
           },
@@ -586,6 +611,18 @@ export class BookingsService {
         return res;
       }, { maxWait: 15000, timeout: 25000 });
 
+      // Asynchronously update dynamic Zoom meeting schedule if connected
+      if (updated.locationType === LocationType.ZOOM && updated.locationData) {
+        const locData = updated.locationData as Record<string, unknown>;
+        if (locData?.meetingId) {
+          void this.zoomService.updateMeeting(updated.hostId, String(locData.meetingId), {
+            startTime: startUtc,
+            durationMinutes: updated.eventType.durationMinutes,
+            timezone: updated.host.timezone || updated.attendeeTimeZone || "UTC",
+          });
+        }
+      }
+
       const manageToken = this.tokenService.generateToken(updated.id, updated.tokenVersion);
       return {
         ...this.mapToResponse(updated),
@@ -701,6 +738,14 @@ export class BookingsService {
 
       return res;
     }, { maxWait: 15000, timeout: 25000 });
+
+    // Asynchronously delete dynamic Zoom meeting from host account if exists
+    if (cancelled.locationType === LocationType.ZOOM && cancelled.locationData) {
+      const locData = cancelled.locationData as Record<string, unknown>;
+      if (locData?.meetingId) {
+        void this.zoomService.deleteMeeting(cancelled.hostId, String(locData.meetingId));
+      }
+    }
 
     const manageToken = this.tokenService.generateToken(cancelled.id, cancelled.tokenVersion);
     return {

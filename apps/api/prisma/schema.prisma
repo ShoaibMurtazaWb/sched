@@ -30,6 +30,7 @@ model User {
   bookings               Booking[]
 
   calendarIntegrations CalendarIntegration[]
+  zoomIntegration      ZoomIntegration?
   auditLogs            AuditLog[]
 
   @@map("users")
@@ -54,6 +55,34 @@ enum LocationType {
   ATTENDEE_CALLS_HOST
   CUSTOM_LINK
   STATIC_VIDEO
+  ZOOM
+}
+
+enum ZoomIntegrationStatus {
+  CONNECTED
+  REVOKED
+  DISCONNECTED
+}
+
+model ZoomIntegration {
+  id                    String                @id @default(uuid()) @db.Uuid
+  userId                String                @unique @map("user_id") @db.Uuid
+  user                  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status                ZoomIntegrationStatus @default(CONNECTED)
+  accountEmail          String                @map("account_email")
+  zoomUserId            String?               @map("zoom_user_id")
+  
+  // Encrypted OAuth secrets
+  encryptedAccessToken  String?               @map("encrypted_access_token")
+  encryptedRefreshToken String?               @map("encrypted_refresh_token")
+  tokenExpiresAt        DateTime?             @map("token_expires_at") @db.Timestamptz(6)
+  scope                 String                @default("")
+  
+  createdAt             DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([userId, status])
+  @@map("zoom_integrations")
 }
 
 model EventType {

@@ -9,6 +9,7 @@ import {
   hostCallsAttendeeLocationSchema,
   inPersonLocationSchema,
   urlLocationSchema,
+  zoomLocationSchema,
 } from "@sched/api-contract";
 
 export function parseEventTypeLocation(
@@ -38,6 +39,10 @@ export function parseEventTypeLocation(
       const parsed = urlLocationSchema.parse(data);
       return { type: "STATIC_VIDEO", data: parsed };
     }
+    case LocationType.ZOOM: {
+      const parsed = zoomLocationSchema.parse(data || {});
+      return { type: "ZOOM", data: parsed };
+    }
     default:
       return null;
   }
@@ -48,6 +53,13 @@ export function parseBookingLocation(
   data: unknown
 ): BookingLocationDetails | null {
   if (!type) return null;
+
+  if (type === LocationType.ZOOM && data && typeof data === "object") {
+    return {
+      type: "ZOOM",
+      data: data as Record<string, unknown>,
+    };
+  }
 
   const eventTypeLoc = parseEventTypeLocation(type, data);
   if (!eventTypeLoc) return null;
@@ -99,6 +111,12 @@ export function toPublicLocationMetadata(
       // Never expose video conferencing URL on unauthenticated public discovery
       return {
         type: "STATIC_VIDEO",
+        extraNotes: parsed.data.extraNotes,
+      };
+    }
+    case "ZOOM": {
+      return {
+        type: "ZOOM",
         extraNotes: parsed.data.extraNotes,
       };
     }

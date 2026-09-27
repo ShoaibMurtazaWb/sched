@@ -60,3 +60,31 @@ export const googleCallbackQuerySchema = z.object({
   state: z.string().min(1, "OAuth state is required"),
 });
 export type GoogleCallbackQuery = z.infer<typeof googleCallbackQuerySchema>;
+
+export const ZoomIntegrationStatusEnum = {
+  CONNECTED: "CONNECTED",
+  REVOKED: "REVOKED",
+  DISCONNECTED: "DISCONNECTED",
+} as const;
+export type ZoomIntegrationStatus =
+  (typeof ZoomIntegrationStatusEnum)[keyof typeof ZoomIntegrationStatusEnum];
+
+export interface ZoomIntegrationResponse {
+  id: string;
+  status: ZoomIntegrationStatus;
+  accountEmail: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const zoomConnectQuerySchema = z.object({
+  returnUrl: z.string().optional(),
+});
+export type ZoomConnectQuery = z.infer<typeof zoomConnectQuerySchema>;
+
+export const zoomCallbackQuerySchema = z.object({
+  code: z.string().min(1, "Authorization code is required"),
+  state: z.string().min(1, "OAuth state is required"),
+});
+export type ZoomCallbackQuery = z.infer<typeof zoomCallbackQuerySchema>;
+

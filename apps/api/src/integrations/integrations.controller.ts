@@ -15,24 +15,33 @@ import type {
   CalendarIntegrationResponse,
   CalendarListResponse,
   UpdateCalendarPreferencesBody,
+  ZoomIntegrationResponse,
 } from "@sched/api-contract";
 import {
   googleCallbackQuerySchema,
   googleConnectQuerySchema,
   updateCalendarPreferencesSchema,
+  zoomCallbackQuerySchema,
+  zoomConnectQuerySchema,
   type GoogleCallbackQuery,
   type GoogleConnectQuery,
+  type ZoomCallbackQuery,
+  type ZoomConnectQuery,
 } from "@sched/api-contract";
 import type { Request, Response } from "express";
 import { CurrentSessionId, CurrentUserId } from "../auth/current-user.decorator";
 import { SessionAuthGuard } from "../auth/session-auth.guard";
 import { zodPipe } from "../shared/pipes/zod-validation.pipe";
 import { GoogleCalendarService } from "./services/google-calendar.service";
+import { ZoomService } from "./services/zoom.service";
 
 @ApiTags("integrations")
 @Controller("api/v1/integrations")
 export class IntegrationsController {
-  constructor(private readonly googleCalendarService: GoogleCalendarService) {}
+  constructor(
+    private readonly googleCalendarService: GoogleCalendarService,
+    private readonly zoomService: ZoomService
+  ) {}
 
   @Get("google/connect")
   @UseGuards(SessionAuthGuard)
@@ -134,6 +143,74 @@ export class IntegrationsController {
   async disconnect(@CurrentUserId() userId: string): Promise<CalendarIntegrationResponse> {
     return this.googleCalendarService.disconnect(userId);
   }
+
+  // ==========================================
+  // Zoom OAuth & Integration Endpoints
+  // ==========================================
+
+  @Get("zoom/connect")
+  @UseGuards(SessionAuthGuard)
+  @ApiOperation({ summary: "Initiate Zoom OAuth 2.0 authorization" })
+  async connectZoom(
+    @CurrentUserId() userId: string,
+    @CurrentSessionId() sessionId: string,
+    @Res() res: Response,
+    @Query(zodPipe(zoomConnectQuerySchema)) _query: ZoomConnectQuery
+  ) {
+    const webOrigin = process.env.WEB_ORIGIN || "http://localhost:3000";
+
+    try {
+      const { url } = this.zoomService.getConnectUrl(userId, sessionId);
+      return res.redirect(url);
+    } catch (err: unknown) {
+      const errorMsg =
+        err instanceof Error ? encodeURIComponent(err.message) : "Failed+to+initiate+Zoom+OAuth";
+      return res.redirect(`${webOrigin}/dashboard/integrations?error=${errorMsg}`);
+    }
+  }
+
+  @Get("zoom/callback")
+  @UseGuards(SessionAuthGuard)
+  @ApiOperation({ summary: "Complete Zoom OAuth 2.0 exchange" })
+  async callbackZoom(
+    @CurrentUserId() userId: string,
+    @CurrentSessionId() sessionId: string,
+    @Res() res: Response,
+    @Query(zodPipe(zoomCallbackQuerySchema)) query: ZoomCallbackQuery
+  ) {
+    const webOrigin = process.env.WEB_ORIGIN || "http://localhost:3000";
+
+    try {
+      await this.zoomService.handleCallback(
+        userId,
+        sessionId,
+        query.code,
+        query.state
+      );
+
+      return res.redirect(`${webOrigin}/dashboard/integrations?connected=zoom`);
+    } catch (err: unknown) {
+      const errorMsg =
+        err instanceof Error ? encodeURIComponent(err.message) : "Authentication+failed";
+      return res.redirect(`${webOrigin}/dashboard/integrations?error=${errorMsg}`);
+    }
+  }
+
+  @Get("zoom")
+  @UseGuards(SessionAuthGuard)
+  @ApiOperation({ summary: "Get Zoom integration status" })
+  async getZoomIntegration(@CurrentUserId() userId: string): Promise<ZoomIntegrationResponse | null> {
+    return this.zoomService.getIntegration(userId);
+  }
+
+  @Post("zoom/disconnect")
+  @HttpCode(200)
+  @UseGuards(SessionAuthGuard)
+  @ApiOperation({ summary: "Disconnect Zoom account" })
+  async disconnectZoom(@CurrentUserId() userId: string): Promise<ZoomIntegrationResponse> {
+    return this.zoomService.disconnect(userId);
+  }
 }
+
 
 

@@ -20,6 +20,7 @@ import {
   Home,
   Check,
 } from "lucide-react";
+import { ZoomLogo } from "@/components/zoom-logo";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
@@ -193,7 +194,30 @@ export default function PublicBookingConfirmationPage({
   let locationContent: React.ReactNode = "Web conferencing details provided";
 
   if (booking.location) {
-    if (booking.location.type === "IN_PERSON") {
+    if (booking.location.type === "ZOOM") {
+      locationIcon = <ZoomLogo className="h-4 w-4 shrink-0" />;
+      const zoomUrl = booking.location.data?.joinUrl || booking.location.data?.url;
+      const passcode = booking.location.data?.password;
+      locationContent = zoomUrl ? (
+        <div className="inline-flex flex-wrap items-center gap-2">
+          <a
+            href={String(zoomUrl)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline font-semibold break-all"
+          >
+            Join Zoom Meeting
+          </a>
+          {Boolean(passcode) && (
+            <span className="text-xs text-neutral-500 font-normal">
+              (Passcode: {String(passcode)})
+            </span>
+          )}
+        </div>
+      ) : (
+        "Zoom meeting details provided in confirmation email"
+      );
+    } else if (booking.location.type === "IN_PERSON") {
       locationIcon = <MapPin className="h-4 w-4 text-neutral-500 shrink-0" />;
       locationContent = String(booking.location.data?.address || "In-person venue");
     } else if (booking.location.type === "STATIC_VIDEO" || booking.location.type === "CUSTOM_LINK") {

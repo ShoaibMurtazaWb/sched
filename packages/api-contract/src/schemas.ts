@@ -27,6 +27,7 @@ export const LocationType = {
   ATTENDEE_CALLS_HOST: "ATTENDEE_CALLS_HOST",
   CUSTOM_LINK: "CUSTOM_LINK",
   STATIC_VIDEO: "STATIC_VIDEO",
+  ZOOM: "ZOOM",
 } as const;
 
 export type LocationType = (typeof LocationType)[keyof typeof LocationType];
@@ -66,6 +67,10 @@ export const urlLocationSchema = z.object({
   extraNotes: z.string().trim().max(500, "Extra notes cannot exceed 500 characters").optional(),
 });
 
+export const zoomLocationSchema = z.object({
+  extraNotes: z.string().trim().max(500, "Extra notes cannot exceed 500 characters").optional(),
+});
+
 export const eventTypeLocationConfigSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("IN_PERSON"), data: inPersonLocationSchema }),
   z.object({
@@ -75,6 +80,7 @@ export const eventTypeLocationConfigSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("ATTENDEE_CALLS_HOST"), data: attendeeCallsHostLocationSchema }),
   z.object({ type: z.literal("CUSTOM_LINK"), data: urlLocationSchema }),
   z.object({ type: z.literal("STATIC_VIDEO"), data: urlLocationSchema }),
+  z.object({ type: z.literal("ZOOM"), data: zoomLocationSchema.default({}) }),
 ]);
 
 export type EventTypeLocationConfig = z.infer<typeof eventTypeLocationConfigSchema>;
@@ -86,6 +92,7 @@ export const publicLocationMetadataSchema = z.object({
     "ATTENDEE_CALLS_HOST",
     "CUSTOM_LINK",
     "STATIC_VIDEO",
+    "ZOOM",
   ]),
   publicAddress: z.string().optional(),
   extraNotes: z.string().optional(),

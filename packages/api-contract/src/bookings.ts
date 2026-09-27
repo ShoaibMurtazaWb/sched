@@ -72,6 +72,7 @@ export const bookingLocationDetailsSchema = z.object({
     "ATTENDEE_CALLS_HOST",
     "CUSTOM_LINK",
     "STATIC_VIDEO",
+    "ZOOM",
   ]),
   data: z.record(z.unknown()),
 });
