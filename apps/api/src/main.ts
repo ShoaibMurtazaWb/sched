@@ -31,8 +31,16 @@ async function bootstrap(): Promise<void> {
     .filter(Boolean);
 
   app.enableCors({
+    // The Next.js proxy calls the API server-to-server (no Origin header) → always allowed.
+    // Browser requests from the Vercel frontend go through the Next.js rewrite, so they
+    // arrive at the API without a cross-origin Origin header.
+    // We still allow the configured WEB_ORIGIN explicitly for:
+    //   - Local development (direct browser → API calls)
+    //   - Any future server-sent-events or WebSocket connections
+    //   - Vercel preview deployments (*.vercel.app)
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       if (!origin) {
+        // No origin = server-to-server (Next.js proxy) or same-origin → allow
         return callback(null, true);
       }
       const isAllowed = allowedOrigins.some((allowed) => {
@@ -40,15 +48,12 @@ async function bootstrap(): Promise<void> {
         if (allowed.startsWith("*.")) {
           return origin.endsWith(allowed.slice(1));
         }
-        if (
-          (allowed.includes(".vercel.app") || process.env.NODE_ENV !== "production") &&
-          origin.endsWith(".vercel.app")
-        ) {
+        // Accept any *.vercel.app origin (Vercel preview deployments)
+        if (origin.endsWith(".vercel.app")) {
           return true;
         }
         return origin === allowed;
       });
-
       if (isAllowed) {
         callback(null, true);
       } else {

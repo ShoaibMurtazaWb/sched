@@ -18,12 +18,13 @@ export class SessionCookieService {
   private options(): CookieOptions {
     const isProduction = this.config.get("NODE_ENV") === "production";
     const secure = this.config.get<string>("COOKIE_SECURE") === "true" || isProduction;
-    const configuredSameSite = this.config.get<string>("COOKIE_SAME_SITE");
-    const sameSite = (configuredSameSite as "none" | "lax" | "strict") || (isProduction ? "none" : "lax");
+    // SameSite=Lax is safe: browser API requests are same-origin via the Next.js proxy.
+    // SameSite=None is NOT required since we no longer call code.run directly from the browser.
+    const sameSite: "lax" | "strict" = "lax";
     return {
       httpOnly: true,
       sameSite,
-      secure: sameSite === "none" ? true : secure,
+      secure,
       path: "/",
       maxAge: SESSION_TTL_MS,
     };

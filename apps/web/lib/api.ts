@@ -69,15 +69,9 @@ async function parseBody(response: Response): Promise<unknown> {
   return JSON.parse(text) as unknown;
 }
 
-export const API_BASE_URL = (
-  typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "")
-    : ""
-);
-
 export function apiUrl(path: string): string {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  return `${API_BASE_URL}/api/v1${cleanPath}`;
+  return `/api/v1${cleanPath}`;
 }
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 20_000;
