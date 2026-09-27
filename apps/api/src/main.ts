@@ -22,10 +22,16 @@ async function bootstrap(): Promise<void> {
   app.use(json({ limit: JSON_BODY_LIMIT }));
   app.useGlobalFilters(new HttpErrorFilter());
   app.useGlobalInterceptors(new RequestIdInterceptor());
+  app.enableShutdownHooks();
 
-  const webOrigin = process.env.WEB_ORIGIN ?? "http://localhost:3000";
+  const rawOrigins = process.env.WEB_ORIGIN ?? "http://localhost:3000";
+  const allowedOrigins = rawOrigins
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: webOrigin,
+    origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
     credentials: true,
   });
 
@@ -43,7 +49,7 @@ async function bootstrap(): Promise<void> {
   }
 
   const port = Number(process.env.PORT ?? 3001);
-  await app.listen(port);
+  await app.listen(port, "0.0.0.0");
 }
 
 void bootstrap();

@@ -1,0 +1,29 @@
+# Build & Tooling artifacts
+node_modules
+.git
+.turbo
+.next
+dist
+out
+coverage
+*.tsbuildinfo
+.DS_Store
+
+# Environment & local secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Frontend workspace (deployed separately to Vercel)
+apps/web
+
+# Local documentation & IDE
+docs/
+.idea
+.vscode

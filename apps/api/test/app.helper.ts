@@ -49,29 +49,15 @@ export async function resetDatabase(app: INestApplication): Promise<void> {
     },
   };
 
-  await prisma.calendarSyncJob.deleteMany({
-    where: {
-      booking: {
-        host: {
-          email: {
-            contains: "example.com",
-          },
-        },
-      },
-    },
-  });
-  await prisma.externalCalendarEvent.deleteMany({
-    where: {
-      booking: {
-        host: {
-          email: {
-            contains: "example.com",
-          },
-        },
-      },
-    },
-  });
-  await prisma.calendarIntegration.deleteMany({
+  const bookingFilter = {
+    OR: [
+      { host: { email: { contains: "example.com" } } },
+      { attendeeEmail: { contains: "example.com" } },
+      { eventType: { user: { email: { contains: "example.com" } } } },
+    ],
+  };
+
+  await prisma.auditLog.deleteMany({
     where: {
       user: {
         email: {
@@ -80,28 +66,50 @@ export async function resetDatabase(app: INestApplication): Promise<void> {
       },
     },
   });
+  await prisma.calendarSyncJob.deleteMany({
+    where: {
+      OR: [
+        { booking: bookingFilter },
+        { integration: { user: { email: { contains: "example.com" } } } },
+      ],
+    },
+  });
+  await prisma.externalCalendarEvent.deleteMany({
+    where: {
+      OR: [
+        { booking: bookingFilter },
+        { integration: { user: { email: { contains: "example.com" } } } },
+      ],
+    },
+  });
   await prisma.notificationJob.deleteMany({
     where: {
       OR: [
         { recipientEmail: { contains: "example.com" } },
-        { booking: { host: { email: { contains: "example.com" } } } },
+        { booking: bookingFilter },
       ],
     },
   });
   await prisma.bookingRescheduleHistory.deleteMany({
     where: {
-      booking: {
-        host: {
-          email: {
-            contains: "example.com",
-          },
+      booking: bookingFilter,
+    },
+  });
+  await prisma.booking.deleteMany({
+    where: bookingFilter,
+  });
+  await prisma.zoomIntegration.deleteMany({
+    where: {
+      user: {
+        email: {
+          contains: "example.com",
         },
       },
     },
   });
-  await prisma.booking.deleteMany({
+  await prisma.calendarIntegration.deleteMany({
     where: {
-      host: {
+      user: {
         email: {
           contains: "example.com",
         },
