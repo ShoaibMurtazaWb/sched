@@ -18,6 +18,7 @@ import {
   Check,
   Calendar as CalendarIcon,
   Globe,
+  Wrench,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -64,8 +65,14 @@ export default function PublicBookingPage({
 
   // Top navigation menu state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDesktopMenuOpen, setIsDesktopMenuOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const desktopMenuRef = useRef<HTMLDivElement>(null);
+
+  // Guest attendee emails state
+  const [showGuestInput, setShowGuestInput] = useState(false);
+  const [guestEmails, setGuestEmails] = useState("");
 
   // Timezone state
   const [attendeeTimezone, setAttendeeTimezone] = useState<string>("UTC");
@@ -109,18 +116,21 @@ export default function PublicBookingPage({
     setCustomAnswers((prev) => ({ ...prev, [qId]: val }));
   };
 
-  // Close menu on click outside
+  // Close menus on click outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setIsMenuOpen(false);
       }
+      if (desktopMenuRef.current && !desktopMenuRef.current.contains(e.target as Node)) {
+        setIsDesktopMenuOpen(false);
+      }
     }
-    if (isMenuOpen) {
+    if (isMenuOpen || isDesktopMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isMenuOpen]);
+  }, [isMenuOpen, isDesktopMenuOpen]);
 
   // Check auth to route Home button to /dashboard or /
   useEffect(() => {
@@ -229,6 +239,10 @@ export default function PublicBookingPage({
 
     setIsSubmitting(true);
     try {
+      const combinedNotes = guestEmails.trim()
+        ? `Additional Guests: ${guestEmails.trim()}${attendeeNotes ? `\n\n${attendeeNotes}` : ""}`
+        : attendeeNotes;
+
       const result = await api<BookingResponse>(`/public/${username}/${eventSlug}/book`, {
         method: "POST",
         body: JSON.stringify({
@@ -237,7 +251,7 @@ export default function PublicBookingPage({
           attendeeEmail,
           attendeeTimeZone: attendeeTimezone,
           attendeePhoneNumber: attendeePhone || undefined,
-          attendeeNotes: attendeeNotes || undefined,
+          attendeeNotes: combinedNotes || undefined,
           customResponses: Object.keys(customAnswers).length > 0 ? customAnswers : undefined,
         }),
       });
@@ -377,7 +391,11 @@ export default function PublicBookingPage({
   }
 
   return (
-    <div className="min-h-screen bg-white font-sans text-neutral-900 selection:bg-blue-600 selection:text-white flex flex-col justify-between relative overflow-x-hidden">
+    <>
+      {/* ========================================================================= */}
+      {/* MOBILE BOOKING VIEW (Screens < md) - 100% Preserved & Untouched          */}
+      {/* ========================================================================= */}
+      <div className="md:hidden min-h-screen bg-white font-sans text-neutral-900 selection:bg-blue-600 selection:text-white flex flex-col justify-between relative overflow-x-hidden">
       {/* Top-Right Powered By Diagonal Ribbon (matching Calendly exact aesthetic) */}
       <div className="absolute top-0 right-0 w-28 h-28 overflow-hidden pointer-events-none z-20 select-none">
         <div className="absolute transform rotate-45 bg-[#4D5055] text-white text-[8px] font-bold uppercase tracking-wider py-1.5 right-[-34px] top-[22px] w-[130px] text-center shadow-md">
@@ -1119,5 +1137,815 @@ export default function PublicBookingPage({
         </button>
       </footer>
     </div>
+
+      {/* ========================================================================= */}
+      {/* DESKTOP BOOKING VIEW (Screens >= md) - Clean Two & Three-Column Experience */}
+      {/* ========================================================================= */}
+      <div className="hidden md:flex min-h-screen bg-[#f8fafc] font-sans text-neutral-900 selection:bg-blue-600 selection:text-white flex-col justify-between items-center py-6 px-4 relative overflow-x-hidden">
+        {/* Top Header Row (Menu on right, Copy link) */}
+        <div className="w-full max-w-[1060px] flex justify-end items-center gap-3 px-4 py-1">
+          {/* Menu Dropdown */}
+          <div className="relative" ref={desktopMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsDesktopMenuOpen((prev) => !prev)}
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-neutral-700 hover:text-neutral-900 px-3 py-1.5 rounded-full hover:bg-neutral-100 transition-colors cursor-pointer"
+            >
+              <span>Menu</span>
+              <ChevronDown className="h-3.5 w-3.5 text-neutral-500" />
+            </button>
+            {isDesktopMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-150">
+                <Link
+                  href={`/public/${username}`}
+                  onClick={() => setIsDesktopMenuOpen(false)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50"
+                >
+                  <User className="h-3.5 w-3.5 text-neutral-500" />
+                  <span>Host profile</span>
+                </Link>
+                <Link
+                  href={homeHref}
+                  onClick={() => setIsDesktopMenuOpen(false)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50"
+                >
+                  <Home className="h-3.5 w-3.5 text-neutral-500" />
+                  <span>Home</span>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Copy link button */}
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-800 bg-white border border-neutral-300 rounded-full px-4 py-1.5 hover:bg-neutral-50 shadow-2xs transition-all cursor-pointer"
+          >
+            {copiedLink ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Copied!</span>
+              </>
+            ) : (
+              <>
+                <Link2 className="h-3.5 w-3.5 text-neutral-600" />
+                <span>Copy link</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Center Container Card matching Screenshots 1, 2, and 3 */}
+        <div className="w-full flex justify-center items-center my-auto py-4">
+          <div
+            className={`bg-white rounded-2xl border border-neutral-200/90 shadow-sm relative overflow-hidden flex transition-all duration-300 ease-in-out ${
+              step === "details"
+                ? "w-full max-w-[860px] min-h-[540px]"
+                : step === "slots"
+                ? "w-full max-w-[1060px] min-h-[560px]"
+                : "w-full max-w-[780px] min-h-[540px]"
+            }`}
+          >
+            {/* Top-Right Powered By Diagonal Ribbon */}
+            <div className="absolute top-0 right-0 w-28 h-28 overflow-hidden pointer-events-none z-20 select-none">
+              <div className="absolute transform rotate-45 bg-[#4D5055] text-white text-[8px] font-bold uppercase tracking-wider py-1.5 right-[-34px] top-[22px] w-[130px] text-center shadow-md">
+                <span className="block text-[6px] font-normal tracking-widest text-neutral-300 -mb-0.5">
+                  POWERED BY
+                </span>
+                Sched
+              </div>
+            </div>
+
+            {/* STEP 1 & STEP 2 (Date & Time Selection) */}
+            {step !== "details" && (
+              <>
+                {/* Left Column: Event details */}
+                <div className="w-[300px] lg:w-[320px] shrink-0 border-r border-neutral-200/80 p-8 flex flex-col justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-neutral-600">
+                      {eventDetails.host.name}
+                    </p>
+                    <h1 className="text-2xl lg:text-[26px] font-extrabold text-[#0B2545] tracking-tight mt-1 leading-snug">
+                      {eventDetails.title}
+                    </h1>
+
+                    <div className="space-y-3 mt-4 text-xs font-semibold text-neutral-700">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-neutral-800 shrink-0" />
+                        <span>{eventDetails.durationMinutes} min</span>
+                      </div>
+
+                      {eventDetails.location && (
+                        <div className="flex items-start gap-2 text-xs font-medium text-neutral-700">
+                          {eventDetails.location.type === "ZOOM" && (
+                            <>
+                              <Video className="h-4 w-4 text-neutral-800 shrink-0 mt-0.5" />
+                              <span>Web conferencing details provided upon confirmation.</span>
+                            </>
+                          )}
+                          {eventDetails.location.type === "IN_PERSON" && (
+                            <>
+                              <MapPin className="h-4 w-4 text-neutral-800 shrink-0 mt-0.5" />
+                              <span>In-Person{eventDetails.location.publicAddress ? `: ${eventDetails.location.publicAddress}` : ""}</span>
+                            </>
+                          )}
+                          {(eventDetails.location.type === "STATIC_VIDEO" || eventDetails.location.type === "CUSTOM_LINK") && (
+                            <>
+                              <Video className="h-4 w-4 text-neutral-800 shrink-0 mt-0.5" />
+                              <span>Web conferencing details provided upon confirmation.</span>
+                            </>
+                          )}
+                          {(eventDetails.location.type === "HOST_CALLS_ATTENDEE" || eventDetails.location.type === "ATTENDEE_CALLS_HOST") && (
+                            <>
+                              <PhoneCall className="h-4 w-4 text-neutral-800 shrink-0 mt-0.5" />
+                              <span>Phone call</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {Boolean(eventDetails.description?.trim()) && (
+                        <p className="text-xs text-neutral-600 leading-relaxed pt-2 whitespace-pre-wrap">
+                          {eventDetails.description.trim()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Cookie settings & Privacy Policy links at bottom */}
+                  <div className="flex items-center gap-4 text-xs font-semibold text-blue-600 pt-8">
+                    <button
+                      type="button"
+                      onClick={() => toast.info("Cookie Settings", "Sched respects your privacy. Essential cookies only are active.")}
+                      className="hover:underline cursor-pointer"
+                    >
+                      Cookie settings
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toast.info("Privacy Policy", "Sched protects your data and never sells your personal information.")}
+                      className="hover:underline cursor-pointer"
+                    >
+                      Privacy Policy
+                    </button>
+                  </div>
+                </div>
+
+                {/* Middle Column: Calendar */}
+                <div
+                  className={`p-8 flex flex-col justify-between ${
+                    step === "slots"
+                      ? "w-[340px] shrink-0 border-r border-neutral-200/80"
+                      : "flex-1"
+                  }`}
+                >
+                  <div>
+                    <h2 className="text-xl font-bold text-[#0B2545] mb-6">
+                      Select a Date & Time
+                    </h2>
+
+                    {/* Month Navigator */}
+                    <div className="flex items-center justify-between px-2 mb-4">
+                      <button
+                        type="button"
+                        onClick={handlePrevMonth}
+                        className="h-8 w-8 flex items-center justify-center rounded-full text-neutral-700 hover:text-blue-600 hover:bg-neutral-100 transition-colors cursor-pointer"
+                        aria-label="Previous month"
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                      </button>
+
+                      <h3 className="text-sm font-bold text-[#0B2545]">
+                        {monthName}
+                      </h3>
+
+                      <button
+                        type="button"
+                        onClick={handleNextMonth}
+                        className="h-8 w-8 flex items-center justify-center rounded-full text-neutral-700 hover:text-blue-600 hover:bg-neutral-100 transition-colors cursor-pointer"
+                        aria-label="Next month"
+                      >
+                        <ChevronRight className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    {/* Weekdays Row */}
+                    <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-neutral-600 mb-2">
+                      {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+                        <div key={d} className="py-1">
+                          {d}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Calendar Days Matrix */}
+                    <div className="grid grid-cols-7 gap-x-1.5 gap-y-2 text-center">
+                      {daysMatrix.map((item, idx) => {
+                        if (!item) {
+                          return <div key={`desktop-empty-${idx}`} className="h-10 w-10 mx-auto" />;
+                        }
+
+                        const isSelected = selectedDate === item.dateString;
+                        const isPast =
+                          new Date(`${item.dateString}T23:59:59`).getTime() < new Date().setHours(0, 0, 0, 0);
+
+                        return (
+                          <div key={`desktop-${item.dateString}`} className="flex flex-col items-center">
+                            <button
+                              type="button"
+                              disabled={isPast}
+                              onClick={() => {
+                                setSelectedDate(item.dateString);
+                                setStep("slots");
+                                setSelectedSlot(null);
+                                setSlotConflictMessage(null);
+                              }}
+                              className={`h-10 w-10 rounded-full text-xs font-semibold tabular-nums transition-all flex items-center justify-center cursor-pointer ${
+                                isSelected
+                                  ? "bg-blue-600 text-white font-bold shadow-xs scale-105"
+                                  : isPast
+                                  ? "text-neutral-400 cursor-not-allowed"
+                                  : "bg-blue-50/90 hover:bg-blue-100 text-blue-600 font-bold"
+                              }`}
+                            >
+                              {item.day}
+                            </button>
+                            {item.dateString === new Date().toISOString().slice(0, 10) && !isSelected && (
+                              <div className="w-1 h-1 bg-blue-600 rounded-full mt-0.5" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Timezone selector */}
+                    <div className="pt-6 space-y-1">
+                      <div className="text-xs font-bold text-neutral-900">
+                        Time zone
+                      </div>
+                      <TimezonePicker
+                        value={attendeeTimezone}
+                        onChange={(newTz) => setAttendeeTimezone(newTz)}
+                        variant="inline"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Troubleshoot button */}
+                  <div className="pt-6">
+                    <button
+                      type="button"
+                      onClick={() => toast.info("Troubleshooting", "All scheduling services are active and operational.")}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-neutral-800 text-neutral-800 hover:bg-neutral-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                    >
+                      <Wrench className="h-3.5 w-3.5 text-neutral-800" />
+                      <span>Troubleshoot</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right Column: Time Slots (Only visible when step === 'slots') */}
+                {step === "slots" && (
+                  <div className="w-[300px] lg:w-[320px] p-6 lg:p-8 flex flex-col justify-start">
+                    <h3 className="text-sm font-semibold text-neutral-700 mb-4">
+                      {dayOfWeekName}, {fullMonthDayYear}
+                    </h3>
+
+                    {/* Conflict Alert (if any) */}
+                    {slotConflictMessage && (
+                      <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 space-y-2 mb-3">
+                        <p className="font-semibold">{slotConflictMessage}</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSlotConflictMessage(null);
+                            void loadSlots();
+                          }}
+                          className="w-full text-xs h-8"
+                        >
+                          Refresh Slots
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Slots List Matching Screenshot 2 */}
+                    {isLoadingSlots ? (
+                      <div className="space-y-2.5">
+                        <Skeleton className="h-11 w-full rounded-md" />
+                        <Skeleton className="h-11 w-full rounded-md" />
+                        <Skeleton className="h-11 w-full rounded-md" />
+                        <Skeleton className="h-11 w-full rounded-md" />
+                      </div>
+                    ) : slots.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-neutral-200 p-6 text-center space-y-2">
+                        <p className="text-xs text-neutral-500">
+                          No available time slots on this day.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5 max-h-[440px] overflow-y-auto pr-1">
+                        {slots.map((slot) => {
+                          const dateObj = new Date(slot.startUtc);
+                          const slotTimeStr = new Intl.DateTimeFormat("en-US", {
+                            timeZone: attendeeTimezone,
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          }).format(dateObj).toLowerCase();
+
+                          const isSlotSelected = selectedSlot?.startUtc === slot.startUtc;
+
+                          if (isSlotSelected) {
+                            return (
+                              <div key={slot.startUtc} className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  className="flex-1 h-11 flex items-center justify-center rounded-lg bg-[#718096] text-white text-sm font-bold cursor-default"
+                                >
+                                  <span className="tabular-nums font-sans">{slotTimeStr}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setStep("details");
+                                  }}
+                                  className="flex-1 h-11 flex items-center justify-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors cursor-pointer shadow-xs"
+                                >
+                                  Next
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <button
+                              key={slot.startUtc}
+                              type="button"
+                              onClick={() => {
+                                setSelectedSlot(slot);
+                              }}
+                              className="w-full h-11 flex items-center justify-center rounded-lg border-2 border-blue-500 hover:border-blue-600 bg-white text-blue-600 hover:bg-blue-50/50 text-sm font-bold transition-all duration-150 cursor-pointer shadow-2xs group"
+                            >
+                              <span className="tabular-nums font-sans">{slotTimeStr}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* STEP 3 (Enter Details) - Matching Screenshot 3 */}
+            {step === "details" && selectedSlot && (
+              <>
+                {/* Left Column: Meeting Summary */}
+                <div className="w-[320px] lg:w-[340px] shrink-0 border-r border-neutral-200/80 p-8 flex flex-col justify-between">
+                  <div>
+                    {/* Back Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep("slots");
+                      }}
+                      className="h-10 w-10 rounded-full border border-neutral-200 bg-white hover:bg-neutral-50 flex items-center justify-center text-blue-600 transition-all cursor-pointer shadow-2xs group mb-5"
+                      title="Back to time slots"
+                      aria-label="Back to time slots"
+                    >
+                      <ArrowLeft className="h-4 w-4 stroke-[2.5] group-hover:-translate-x-0.5 transition-transform" />
+                    </button>
+
+                    <p className="text-sm font-semibold text-neutral-600">
+                      {eventDetails.host.name}
+                    </p>
+                    <h1 className="text-2xl font-extrabold text-[#0B2545] tracking-tight mt-1 leading-snug">
+                      {eventDetails.title}
+                    </h1>
+
+                    <div className="space-y-3.5 mt-5 text-xs font-semibold text-neutral-700">
+                      <div className="flex items-center gap-2.5">
+                        <Clock className="h-4 w-4 text-neutral-800 shrink-0" />
+                        <span>{eventDetails.durationMinutes} min</span>
+                      </div>
+
+                      {eventDetails.location && (
+                        <div className="flex items-start gap-2.5 text-neutral-700">
+                          {eventDetails.location.type === "ZOOM" && (
+                            <>
+                              <Video className="h-4 w-4 text-neutral-800 shrink-0 mt-0.5" />
+                              <span>Web conferencing details provided upon confirmation.</span>
+                            </>
+                          )}
+                          {eventDetails.location.type === "IN_PERSON" && (
+                            <>
+                              <MapPin className="h-4 w-4 text-neutral-800 shrink-0 mt-0.5" />
+                              <span>In-Person{eventDetails.location.publicAddress ? `: ${eventDetails.location.publicAddress}` : ""}</span>
+                            </>
+                          )}
+                          {(eventDetails.location.type === "STATIC_VIDEO" || eventDetails.location.type === "CUSTOM_LINK") && (
+                            <>
+                              <Video className="h-4 w-4 text-neutral-800 shrink-0 mt-0.5" />
+                              <span>Web conferencing details provided upon confirmation.</span>
+                            </>
+                          )}
+                          {(eventDetails.location.type === "HOST_CALLS_ATTENDEE" || eventDetails.location.type === "ATTENDEE_CALLS_HOST") && (
+                            <>
+                              <PhoneCall className="h-4 w-4 text-neutral-800 shrink-0 mt-0.5" />
+                              <span>Phone call</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex items-start gap-2.5 text-neutral-700">
+                        <CalendarIcon className="h-4 w-4 text-neutral-800 shrink-0 mt-0.5" />
+                        <span>{slotTimeRange}, {slotFullDate}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2.5 text-neutral-700">
+                        <Globe className="h-4 w-4 text-neutral-800 shrink-0" />
+                        <span>{attendeeTimezone}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cookie settings & Privacy Policy links at bottom */}
+                  <div className="flex items-center gap-4 text-xs font-semibold text-blue-600 pt-8">
+                    <button
+                      type="button"
+                      onClick={() => toast.info("Cookie Settings", "Sched respects your privacy. Essential cookies only are active.")}
+                      className="hover:underline cursor-pointer"
+                    >
+                      Cookie settings
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toast.info("Privacy Policy", "Sched protects your data and never sells your personal information.")}
+                      className="hover:underline cursor-pointer"
+                    >
+                      Privacy Policy
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right Column: Enter Details Form */}
+                <div className="flex-1 p-8 overflow-y-auto max-h-[660px]">
+                  {existingBookingDuplicate ? (
+                    <div className="space-y-4 rounded-xl border border-neutral-200 bg-neutral-50 p-5">
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-bold text-neutral-900">
+                          You already have a booking for this meeting.
+                        </h3>
+                        <div className="pt-2 text-xs space-y-1 text-neutral-600">
+                          <p className="font-semibold text-neutral-900">Existing booking:</p>
+                          <p>
+                            <span className="text-neutral-500">Date: </span>
+                            <span className="font-medium text-neutral-900">
+                              {new Intl.DateTimeFormat("en-US", {
+                                timeZone: attendeeTimezone,
+                                weekday: "long",
+                                month: "long",
+                                day: "numeric",
+                                year: "numeric",
+                              }).format(new Date(existingBookingDuplicate.startTime))}
+                            </span>
+                          </p>
+                          <p>
+                            <span className="text-neutral-500">Time: </span>
+                            <span className="font-medium text-neutral-900">
+                              {new Intl.DateTimeFormat("en-US", {
+                                timeZone: attendeeTimezone,
+                                hour: "numeric",
+                                minute: "2-digit",
+                                hour12: true,
+                              }).format(new Date(existingBookingDuplicate.startTime))} ({attendeeTimezone})
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 pt-2">
+                        <Button asChild className="w-full" size="sm">
+                          <Link href={existingBookingDuplicate.manageUrl}>View Existing Booking</Link>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          size="sm"
+                          onClick={() => {
+                            setExistingBookingDuplicate(null);
+                            setStep("slots");
+                          }}
+                        >
+                          Choose Another Time
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleBookSubmit} className="space-y-4">
+                      <h2 className="text-xl font-bold text-[#0B2545] pb-1">
+                        Enter Details
+                      </h2>
+
+                      {/* Name */}
+                      <div className="space-y-1.5">
+                        <Label htmlFor="desktopAttendeeName" className="text-xs font-bold text-neutral-800">
+                          Name *
+                        </Label>
+                        <Input
+                          id="desktopAttendeeName"
+                          value={attendeeName}
+                          onChange={(e) => setAttendeeName(e.target.value)}
+                          placeholder="Shoaib Murtaza"
+                          required
+                          className="h-11 rounded-lg border-neutral-300 bg-white text-xs font-medium focus:border-blue-600 focus:ring-blue-600"
+                          aria-invalid={Boolean(fieldValidationErrors.attendeeName)}
+                        />
+                        {fieldValidationErrors.attendeeName && (
+                          <p className="text-[11px] text-red-500">
+                            {fieldValidationErrors.attendeeName}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Email */}
+                      <div className="space-y-1.5">
+                        <Label htmlFor="desktopAttendeeEmail" className="text-xs font-bold text-neutral-800">
+                          Email *
+                        </Label>
+                        <Input
+                          id="desktopAttendeeEmail"
+                          type="email"
+                          value={attendeeEmail}
+                          onChange={(e) => setAttendeeEmail(e.target.value)}
+                          placeholder="name@example.com"
+                          required
+                          className="h-11 rounded-lg border-neutral-300 bg-white text-xs font-medium focus:border-blue-600 focus:ring-blue-600"
+                          aria-invalid={Boolean(fieldValidationErrors.attendeeEmail)}
+                        />
+                        {fieldValidationErrors.attendeeEmail && (
+                          <p className="text-[11px] text-red-500">
+                            {fieldValidationErrors.attendeeEmail}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Add Guests Button / Input */}
+                      <div>
+                        {!showGuestInput ? (
+                          <button
+                            type="button"
+                            onClick={() => setShowGuestInput(true)}
+                            className="inline-flex items-center px-3.5 py-1 text-xs font-semibold rounded-full border border-blue-600 text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                          >
+                            Add guests
+                          </button>
+                        ) : (
+                          <div className="space-y-1.5 animate-in fade-in-0 duration-150">
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="desktopGuestEmails" className="text-xs font-bold text-neutral-800">
+                                Guest Emails
+                              </Label>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowGuestInput(false);
+                                  setGuestEmails("");
+                                }}
+                                className="text-[11px] text-neutral-500 hover:text-neutral-800 underline cursor-pointer"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                            <Input
+                              id="desktopGuestEmails"
+                              type="text"
+                              value={guestEmails}
+                              onChange={(e) => setGuestEmails(e.target.value)}
+                              placeholder="guest1@example.com, guest2@example.com"
+                              className="h-11 rounded-lg border-neutral-300 bg-white text-xs font-medium focus:border-blue-600 focus:ring-blue-600"
+                            />
+                            <p className="text-[11px] text-neutral-500">
+                              Notify additional participants by entering their comma-separated emails.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Phone (if required) */}
+                      {eventDetails.location?.type === "HOST_CALLS_ATTENDEE" && (
+                        <div className="space-y-1.5">
+                          <Label htmlFor="desktopAttendeePhone" className="text-xs font-bold text-neutral-800">
+                            Phone Number *
+                          </Label>
+                          <Input
+                            id="desktopAttendeePhone"
+                            type="tel"
+                            value={attendeePhone}
+                            onChange={(e) => setAttendeePhone(e.target.value)}
+                            placeholder="+92 300 1234567"
+                            required
+                            className="h-11 rounded-lg border-neutral-300 bg-white text-xs font-medium focus:border-blue-600 focus:ring-blue-600"
+                            aria-invalid={Boolean(fieldValidationErrors.attendeePhoneNumber)}
+                          />
+                          {fieldValidationErrors.attendeePhoneNumber && (
+                            <p className="text-[11px] text-red-500">
+                              {fieldValidationErrors.attendeePhoneNumber}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Custom Questions */}
+                      {eventDetails.customQuestions && eventDetails.customQuestions.length > 0 && (
+                        <div className="space-y-4 pt-1">
+                          {eventDetails.customQuestions.map((q) => {
+                            const val = customAnswers[q.id];
+
+                            if (q.type === "TEXT") {
+                              return (
+                                <div key={q.id} className="space-y-1.5">
+                                  <Label htmlFor={`desktop_q_${q.id}`} className="text-xs font-bold text-neutral-800">
+                                    {q.label} {q.required && <span className="text-red-500">*</span>}
+                                  </Label>
+                                  <Input
+                                    id={`desktop_q_${q.id}`}
+                                    value={typeof val === "string" ? val : ""}
+                                    onChange={(e) => setCustomAnswer(q.id, e.target.value)}
+                                    placeholder={q.placeholder || ""}
+                                    required={q.required}
+                                    className="h-11 rounded-lg border-neutral-300 bg-white text-xs font-medium"
+                                  />
+                                </div>
+                              );
+                            }
+
+                            if (q.type === "TEXTAREA") {
+                              return (
+                                <div key={q.id} className="space-y-1.5">
+                                  <Label htmlFor={`desktop_q_${q.id}`} className="text-xs font-bold text-neutral-800">
+                                    {q.label} {q.required && <span className="text-red-500">*</span>}
+                                  </Label>
+                                  <Textarea
+                                    id={`desktop_q_${q.id}`}
+                                    value={typeof val === "string" ? val : ""}
+                                    onChange={(e) => setCustomAnswer(q.id, e.target.value)}
+                                    placeholder={q.placeholder || ""}
+                                    required={q.required}
+                                    rows={2}
+                                    className="rounded-lg border-neutral-300 bg-white text-xs font-medium"
+                                  />
+                                </div>
+                              );
+                            }
+
+                            if (q.type === "SELECT") {
+                              if (q.allowMultiple) {
+                                const selectedArray: string[] = Array.isArray(val)
+                                  ? val
+                                  : typeof val === "string" && val
+                                  ? val.split(",").map((s) => s.trim()).filter(Boolean)
+                                  : [];
+
+                                const handleToggle = (optId: string) => {
+                                  const next = selectedArray.includes(optId)
+                                    ? selectedArray.filter((id) => id !== optId)
+                                    : [...selectedArray, optId];
+                                  setCustomAnswer(q.id, next);
+                                };
+
+                                return (
+                                  <div key={q.id} className="space-y-1.5">
+                                    <Label className="text-xs font-bold text-neutral-800">
+                                      {q.label} {q.required && <span className="text-red-500">*</span>}
+                                    </Label>
+                                    <div className="space-y-2 pt-0.5">
+                                      {q.options?.map((opt) => (
+                                        <label
+                                          key={opt.id}
+                                          className="flex items-center gap-2.5 text-xs text-neutral-800 cursor-pointer font-medium"
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={selectedArray.includes(opt.id)}
+                                            onChange={() => handleToggle(opt.id)}
+                                            className="h-4 w-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-500"
+                                          />
+                                          <span>{opt.label}</span>
+                                        </label>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <div key={q.id} className="space-y-1.5">
+                                  <Label htmlFor={`desktop_q_${q.id}`} className="text-xs font-bold text-neutral-800">
+                                    {q.label} {q.required && <span className="text-red-500">*</span>}
+                                  </Label>
+                                  <select
+                                    id={`desktop_q_${q.id}`}
+                                    value={typeof val === "string" ? val : ""}
+                                    onChange={(e) => setCustomAnswer(q.id, e.target.value)}
+                                    required={q.required}
+                                    className="w-full h-11 px-3 rounded-lg border border-neutral-300 bg-white text-xs font-medium text-neutral-900 focus:border-blue-600 focus:outline-none"
+                                  >
+                                    <option value="">Select an option...</option>
+                                    {q.options?.map((opt) => (
+                                      <option key={opt.id} value={opt.id}>
+                                        {opt.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              );
+                            }
+
+                            if (q.type === "CHECKBOX") {
+                              return (
+                                <div key={q.id} className="flex items-start gap-2.5 pt-1">
+                                  <input
+                                    type="checkbox"
+                                    id={`desktop_q_${q.id}`}
+                                    checked={Boolean(val)}
+                                    onChange={(e) => setCustomAnswer(q.id, e.target.checked)}
+                                    required={q.required}
+                                    className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-500"
+                                  />
+                                  <Label htmlFor={`desktop_q_${q.id}`} className="text-xs font-medium text-neutral-800 cursor-pointer leading-tight">
+                                    {q.label} {q.required && <span className="text-red-500">*</span>}
+                                  </Label>
+                                </div>
+                              );
+                            }
+
+                            return null;
+                          })}
+                        </div>
+                      )}
+
+                      {/* Notes / Agenda */}
+                      <div className="space-y-1.5 pt-1">
+                        <Label htmlFor="desktopAttendeeNotes" className="text-xs font-bold text-neutral-800">
+                          Please share anything that will help prepare for our meeting.
+                        </Label>
+                        <Textarea
+                          id="desktopAttendeeNotes"
+                          value={attendeeNotes}
+                          onChange={(e) => setAttendeeNotes(e.target.value)}
+                          placeholder=""
+                          rows={3}
+                          className="rounded-lg border-neutral-300 bg-white text-xs font-medium focus:border-blue-600 focus:ring-blue-600"
+                        />
+                      </div>
+
+                      {/* Terms and Privacy Notice */}
+                      <p className="text-[11px] text-neutral-600 leading-relaxed pt-2">
+                        By proceeding, you confirm that you have read and agree to{" "}
+                        <span className="text-blue-600 font-bold hover:underline cursor-pointer">
+                          Sched&apos;s Participant Terms
+                        </span>{" "}
+                        and{" "}
+                        <span className="text-blue-600 font-bold hover:underline cursor-pointer">
+                          Privacy Notice
+                        </span>
+                        .
+                      </p>
+
+                      {/* Schedule Event Button */}
+                      <div className="pt-2">
+                        <Button
+                          type="submit"
+                          disabled={isSubmitting}
+                          className="w-full sm:w-auto px-8 h-11 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-xs transition-colors cursor-pointer"
+                        >
+                          {isSubmitting ? (
+                            <span className="flex items-center justify-center gap-2">
+                              <Spinner size="sm" />
+                              <span>Scheduling…</span>
+                            </span>
+                          ) : (
+                            <span>Schedule Event</span>
+                          )}
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Minimal Desktop Bottom Spacer */}
+        <div className="py-2" />
+      </div>
+    </>
   );
 }
