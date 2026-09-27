@@ -221,7 +221,7 @@ function baseHtml(content: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sched</title>
   <style>
-    body { margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a; }
+    body { margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a; -webkit-font-smoothing: antialiased; }
     .wrapper { width: 100%; max-width: 580px; margin: 0 auto; padding: 36px 16px; box-sizing: border-box; }
     .brand-header { text-align: center; margin-bottom: 24px; }
     .brand-table { margin: 0 auto; }
@@ -230,15 +230,19 @@ function baseHtml(content: string): string {
     .badge-success { background-color: #eff6ff; color: #0069ff; border: 1px solid #bfdbfe; }
     .badge-info { background-color: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
     .badge-danger { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-    h1 { font-size: 22px; font-weight: 700; margin: 16px 0 10px 0; color: #0f172a; line-height: 1.3; }
+    h1 { font-size: 24px; font-weight: 800; margin: 12px 0 6px 0; color: #0b2545; line-height: 1.3; letter-spacing: -0.02em; }
+    .datetime-header { font-size: 15px; font-weight: 700; color: #0069ff; margin: 6px 0 16px 0; line-height: 1.4; }
     p { font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 16px 0; }
+    .zoom-cta-box { background-color: #f0f7ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 22px 20px; text-align: center; margin: 20px 0; }
+    .zoom-btn { display: inline-block; background-color: #2D8CFF; color: #ffffff !important; text-decoration: none; padding: 13px 32px; border-radius: 8px; font-size: 15px; font-weight: 700; box-shadow: 0 3px 8px rgba(45,140,255,0.35); text-align: center; }
     .details-box { background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; padding: 18px; margin: 20px 0; }
     .details-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
     .details-row:last-child { border-bottom: none; }
     .details-label { color: #64748b; font-weight: 500; }
     .details-value { color: #0f172a; font-weight: 600; text-align: right; }
-    .btn { display: inline-block; background-color: #0069ff; color: #ffffff !important; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-size: 14px; font-weight: 600; text-align: center; margin-top: 12px; box-shadow: 0 2px 4px rgba(0,105,255,0.2); }
-    .footer { text-align: center; margin-top: 24px; font-size: 12px; color: #94a3b8; }
+    .btn { display: inline-block; background-color: #0069ff; color: #ffffff !important; text-decoration: none; padding: 10px 22px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; }
+    .action-links { text-align: center; margin-top: 24px; padding-top: 18px; border-top: 1px solid #f1f5f9; }
+    .footer { text-align: center; margin-top: 24px; font-size: 12px; color: #94a3b8; line-height: 1.5; }
     .strikethrough { text-decoration: line-through; color: #94a3b8; margin-right: 8px; }
   </style>
 </head>
@@ -262,11 +266,56 @@ function baseHtml(content: string): string {
       ${content}
     </div>
     <div class="footer">
-      Powered by <strong>Sched</strong> — Conflict-Free Scheduling
+      Sent via <strong>Sched</strong> &bull; Simple, conflict-free scheduling
     </div>
   </div>
 </body>
 </html>`;
+}
+
+function renderZoomCtaHtml(snapshot: SnapshotPayload): string {
+  if (snapshot.locationType !== "ZOOM" || !snapshot.locationData) {
+    return "";
+  }
+
+  const data = snapshot.locationData;
+  const joinUrl = typeof data.joinUrl === "string" ? data.joinUrl : "";
+  const safeJoinUrl = escapeHtml(joinUrl);
+  const meetingId = typeof data.meetingId === "string" ? escapeHtml(data.meetingId) : "";
+  const passcode = typeof data.password === "string" ? escapeHtml(data.password) : "";
+
+  return `
+    <div class="zoom-cta-box">
+      <div style="font-size: 11px; font-weight: 700; color: #1d4ed8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px;">
+        🎥 Zoom Video Conference
+      </div>
+      <div style="margin-bottom: 12px;">
+        <a href="${safeJoinUrl}" class="zoom-btn" target="_blank" rel="noopener noreferrer">
+          Join Zoom Meeting
+        </a>
+      </div>
+      <div style="font-size: 12px; color: #475569; word-break: break-all; margin-top: 8px;">
+        <a href="${safeJoinUrl}" style="color: #2563eb; text-decoration: underline;" target="_blank" rel="noopener noreferrer">${safeJoinUrl || "Join Zoom"}</a>
+      </div>
+      ${
+        meetingId || passcode
+          ? `<div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #bfdbfe; font-size: 13px; color: #1e293b;">
+              ${
+                meetingId
+                  ? `<span><strong>Meeting ID:</strong> <code style="background: #e0f2fe; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${meetingId}</code></span>`
+                  : ""
+              }
+              ${meetingId && passcode ? ` &nbsp;&bull;&nbsp; ` : ""}
+              ${
+                passcode
+                  ? `<span><strong>Passcode:</strong> <code style="background: #e0f2fe; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${passcode}</code></span>`
+                  : ""
+              }
+            </div>`
+          : ""
+      }
+    </div>
+  `;
 }
 
 export function renderBookingConfirmedAttendee(
@@ -289,14 +338,24 @@ export function renderBookingConfirmedAttendee(
   const locationText = renderLocationText(snapshot, "ATTENDEE");
   const customResponsesHtml = renderCustomResponsesHtml(snapshot);
   const customResponsesText = renderCustomResponsesText(snapshot);
-  const zoomJoinUrl = snapshot.locationType === "ZOOM" && typeof snapshot.locationData?.joinUrl === "string" ? snapshot.locationData.joinUrl : null;
+  const zoomCtaHtml = renderZoomCtaHtml(snapshot);
+
+  const rescheduleUrl = `${manageUrl}#reschedule`;
+  const cancelUrl = `${manageUrl}#cancel`;
 
   const html = baseHtml(`
     <div style="text-align: center; margin-bottom: 20px;">
       <span class="badge badge-success">Confirmed</span>
-      <h1>You're scheduled!</h1>
-      <p>A calendar invitation has been attached to this email for your session with <strong>${safeHostName}</strong>.</p>
+      <h1>${safeEventTitle}</h1>
+      <div class="datetime-header">
+        🗓 ${dateStr} &bull; ${timeRangeStr}
+      </div>
+      <p style="margin: 0; font-size: 13px; color: #64748b;">
+        Your meeting with <strong>${safeHostName}</strong> has been scheduled.
+      </p>
     </div>
+
+    ${zoomCtaHtml}
 
     <div class="details-box">
       <div class="details-row"><span class="details-label">Event:</span><span class="details-value">${safeEventTitle}</span></div>
@@ -313,26 +372,38 @@ export function renderBookingConfirmedAttendee(
       }
     </div>
 
-    <div style="text-align: center; margin-top: 24px;">
-      ${zoomJoinUrl ? `<a href="${escapeHtml(zoomJoinUrl)}" class="btn" style="background-color: #2D8CFF; margin-right: 8px; margin-bottom: 8px;" target="_blank" rel="noopener noreferrer">Join Zoom Meeting</a>` : ""}
-      <a href="${manageUrl}" class="btn" ${zoomJoinUrl ? 'style="background-color: #475569;"' : ""}>View Booking Details</a>
+    <div class="action-links">
+      <p style="margin: 0 0 12px 0; font-size: 12px; color: #64748b;">
+        📎 A calendar invitation (.ics) is attached to this email.
+      </p>
+      <div style="margin-bottom: 12px;">
+        <a href="${manageUrl}" class="btn" style="background-color: #0069ff; margin: 4px;">View Booking Details</a>
+        <a href="${rescheduleUrl}" class="btn" style="background-color: #f1f5f9; color: #0f172a !important; border: 1px solid #cbd5e1; margin: 4px;">Reschedule</a>
+        <a href="${cancelUrl}" class="btn" style="background-color: #ffffff; color: #dc2626 !important; border: 1px solid #fecaca; margin: 4px;">Cancel</a>
+      </div>
+      <p style="font-size: 12px; color: #94a3b8; margin: 0;">
+        Need to make changes? You can reschedule or cancel anytime before the meeting starts.
+      </p>
     </div>
-
-    <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px;">
-      Need to make changes? <a href="${manageUrl}" style="color: #ef4444; text-decoration: underline;">Cancel or reschedule booking</a>
-    </p>
   `);
 
-  const text = `CONFIRMED: ${snapshot.eventTitle} with ${snapshot.hostName}
+  const zoomData = snapshot.locationType === "ZOOM" && snapshot.locationData ? snapshot.locationData : null;
+  const zoomText = zoomData && typeof zoomData.joinUrl === "string"
+    ? `\nZOOM MEETING:\nJoin URL: ${zoomData.joinUrl}${zoomData.meetingId ? `\nMeeting ID: ${zoomData.meetingId}` : ""}${zoomData.password ? `\nPasscode: ${zoomData.password}` : ""}\n`
+    : "";
 
-You are scheduled with ${snapshot.hostName}!
+  const text = `CONFIRMED: ${snapshot.eventTitle} with ${snapshot.hostName}
 
 Date: ${dateStr}
 Time: ${timeRangeStr}
 Duration: ${snapshot.durationMinutes} minutes
 Host: ${snapshot.hostName} (${snapshot.hostEmail})
-${locationText}${customResponsesText}${snapshot.attendeeNotes ? `Your Notes: ${snapshot.attendeeNotes}\n` : ""}
-Manage / Reschedule: ${manageUrl}
+${locationText}${zoomText}${customResponsesText}${snapshot.attendeeNotes ? `Your Notes: ${snapshot.attendeeNotes}\n` : ""}
+Manage Booking: ${manageUrl}
+Reschedule: ${rescheduleUrl}
+Cancel: ${cancelUrl}
+
+A calendar invite (.ics) has been attached to this email.
 `;
 
   return { subject, html, text };
@@ -340,7 +411,8 @@ Manage / Reschedule: ${manageUrl}
 
 export function renderBookingConfirmedHost(
   snapshot: SnapshotPayload,
-  appUrl: string
+  appUrl: string,
+  manageUrl?: string
 ): { subject: string; html: string; text: string } {
   const { dateStr, timeRangeStr } = formatZonedRange(
     snapshot.startUtc,
@@ -354,19 +426,31 @@ export function renderBookingConfirmedHost(
   const safeEventTitle = escapeHtml(snapshot.eventTitle);
   const safeAttendeeName = escapeHtml(snapshot.attendeeName);
   const safeAttendeeEmail = escapeHtml(snapshot.attendeeEmail);
+  const safeHostName = escapeHtml(snapshot.hostName);
+  const safeHostEmail = escapeHtml(snapshot.hostEmail);
   const safeAttendeeNotes = snapshot.attendeeNotes ? escapeHtml(snapshot.attendeeNotes) : "";
   const locationHtml = renderLocationHtml(snapshot, "HOST");
   const locationText = renderLocationText(snapshot, "HOST");
   const customResponsesHtml = renderCustomResponsesHtml(snapshot);
   const customResponsesText = renderCustomResponsesText(snapshot);
-  const zoomJoinUrl = snapshot.locationType === "ZOOM" && typeof snapshot.locationData?.joinUrl === "string" ? snapshot.locationData.joinUrl : null;
+  const zoomCtaHtml = renderZoomCtaHtml(snapshot);
+
+  const rescheduleUrl = manageUrl ? `${manageUrl}#reschedule` : dashboardUrl;
+  const cancelUrl = manageUrl ? `${manageUrl}#cancel` : dashboardUrl;
 
   const html = baseHtml(`
     <div style="text-align: center; margin-bottom: 20px;">
       <span class="badge badge-info">New Booking</span>
-      <h1>New Session Scheduled</h1>
-      <p><strong>${safeAttendeeName}</strong> has scheduled a new meeting with you.</p>
+      <h1>${safeEventTitle}</h1>
+      <div class="datetime-header">
+        🗓 ${dateStr} &bull; ${timeRangeStr}
+      </div>
+      <p style="margin: 0; font-size: 13px; color: #64748b;">
+        <strong>${safeAttendeeName}</strong> has scheduled a meeting with you.
+      </p>
     </div>
+
+    ${zoomCtaHtml}
 
     <div class="details-box">
       <div class="details-row"><span class="details-label">Event:</span><span class="details-value">${safeEventTitle}</span></div>
@@ -374,6 +458,7 @@ export function renderBookingConfirmedHost(
       <div class="details-row"><span class="details-label">Date:</span><span class="details-value">${dateStr}</span></div>
       <div class="details-row"><span class="details-label">Time:</span><span class="details-value">${timeRangeStr}</span></div>
       <div class="details-row"><span class="details-label">Duration:</span><span class="details-value">${snapshot.durationMinutes} mins</span></div>
+      <div class="details-row"><span class="details-label">Host:</span><span class="details-value">${safeHostName} (${safeHostEmail})</span></div>
       ${locationHtml}
       ${customResponsesHtml}
       ${
@@ -383,22 +468,35 @@ export function renderBookingConfirmedHost(
       }
     </div>
 
-    <div style="text-align: center; margin-top: 24px;">
-      ${zoomJoinUrl ? `<a href="${escapeHtml(zoomJoinUrl)}" class="btn" style="background-color: #2D8CFF; margin-right: 8px; margin-bottom: 8px;" target="_blank" rel="noopener noreferrer">Join Zoom Meeting</a>` : ""}
-      <a href="${dashboardUrl}" class="btn" ${zoomJoinUrl ? 'style="background-color: #475569;"' : ""}>View in Dashboard</a>
+    <div class="action-links">
+      <p style="margin: 0 0 12px 0; font-size: 12px; color: #64748b;">
+        📎 A calendar invitation (.ics) is attached to this email.
+      </p>
+      <div style="margin-bottom: 12px;">
+        <a href="${dashboardUrl}" class="btn" style="background-color: #0069ff; margin: 4px;">View in Dashboard</a>
+        <a href="${rescheduleUrl}" class="btn" style="background-color: #f1f5f9; color: #0f172a !important; border: 1px solid #cbd5e1; margin: 4px;">Reschedule</a>
+        <a href="${cancelUrl}" class="btn" style="background-color: #ffffff; color: #dc2626 !important; border: 1px solid #fecaca; margin: 4px;">Cancel</a>
+      </div>
     </div>
   `);
 
-  const text = `NEW BOOKING: ${snapshot.attendeeName} - ${snapshot.eventTitle}
+  const zoomData = snapshot.locationType === "ZOOM" && snapshot.locationData ? snapshot.locationData : null;
+  const zoomText = zoomData && typeof zoomData.joinUrl === "string"
+    ? `\nZOOM MEETING:\nJoin URL: ${zoomData.joinUrl}${zoomData.meetingId ? `\nMeeting ID: ${zoomData.meetingId}` : ""}${zoomData.password ? `\nPasscode: ${zoomData.password}` : ""}\n`
+    : "";
 
-A new meeting has been booked on your schedule.
+  const text = `NEW BOOKING: ${snapshot.attendeeName} - ${snapshot.eventTitle}
 
 Attendee: ${snapshot.attendeeName} (${snapshot.attendeeEmail})
 Date: ${dateStr}
 Time: ${timeRangeStr}
 Duration: ${snapshot.durationMinutes} minutes
-${locationText}${customResponsesText}${snapshot.attendeeNotes ? `Attendee Notes: ${snapshot.attendeeNotes}\n` : ""}
+${locationText}${zoomText}${customResponsesText}${snapshot.attendeeNotes ? `Attendee Notes: ${snapshot.attendeeNotes}\n` : ""}
 Dashboard: ${dashboardUrl}
+Reschedule: ${rescheduleUrl}
+Cancel: ${cancelUrl}
+
+A calendar invite (.ics) has been attached to this email.
 `;
 
   return { subject, html, text };
@@ -432,14 +530,24 @@ export function renderBookingRescheduledAttendee(
   const safeReason = snapshot.rescheduleReason ? escapeHtml(snapshot.rescheduleReason) : "";
   const locationHtml = renderLocationHtml(snapshot, "ATTENDEE");
   const locationText = renderLocationText(snapshot, "ATTENDEE");
-  const zoomJoinUrl = snapshot.locationType === "ZOOM" && typeof snapshot.locationData?.joinUrl === "string" ? snapshot.locationData.joinUrl : null;
+  const zoomCtaHtml = renderZoomCtaHtml(snapshot);
+
+  const rescheduleUrl = `${manageUrl}#reschedule`;
+  const cancelUrl = `${manageUrl}#cancel`;
 
   const html = baseHtml(`
     <div style="text-align: center; margin-bottom: 20px;">
       <span class="badge badge-info">Rescheduled</span>
-      <h1>Meeting Rescheduled</h1>
-      <p>Your meeting with <strong>${safeHostName}</strong> has been rescheduled to a new time. An updated calendar invitation is attached.</p>
+      <h1>${safeEventTitle}</h1>
+      <div class="datetime-header">
+        🗓 ${newDateStr} &bull; ${newTimeRangeStr}
+      </div>
+      <p style="margin: 0; font-size: 13px; color: #64748b;">
+        Your meeting with <strong>${safeHostName}</strong> has been moved to a new time.
+      </p>
     </div>
+
+    ${zoomCtaHtml}
 
     <div class="details-box">
       <div class="details-row"><span class="details-label">Event:</span><span class="details-value">${safeEventTitle}</span></div>
@@ -459,25 +567,33 @@ export function renderBookingRescheduledAttendee(
       }
     </div>
 
-    <div style="text-align: center; margin-top: 24px;">
-      ${zoomJoinUrl ? `<a href="${escapeHtml(zoomJoinUrl)}" class="btn" style="background-color: #2D8CFF; margin-right: 8px; margin-bottom: 8px;" target="_blank" rel="noopener noreferrer">Join Zoom Meeting</a>` : ""}
-      <a href="${manageUrl}" class="btn" ${zoomJoinUrl ? 'style="background-color: #475569;"' : ""}>View Updated Details</a>
+    <div class="action-links">
+      <p style="margin: 0 0 12px 0; font-size: 12px; color: #64748b;">
+        📎 An updated calendar invitation (.ics) is attached to this email.
+      </p>
+      <div style="margin-bottom: 12px;">
+        <a href="${manageUrl}" class="btn" style="background-color: #0069ff; margin: 4px;">View Updated Details</a>
+        <a href="${rescheduleUrl}" class="btn" style="background-color: #f1f5f9; color: #0f172a !important; border: 1px solid #cbd5e1; margin: 4px;">Reschedule</a>
+        <a href="${cancelUrl}" class="btn" style="background-color: #ffffff; color: #dc2626 !important; border: 1px solid #fecaca; margin: 4px;">Cancel</a>
+      </div>
     </div>
-
-    <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px;">
-      Need to make changes? <a href="${manageUrl}" style="color: #ef4444; text-decoration: underline;">Cancel or reschedule booking</a>
-    </p>
   `);
 
-  const text = `RESCHEDULED: ${snapshot.eventTitle} with ${snapshot.hostName}
+  const zoomData = snapshot.locationType === "ZOOM" && snapshot.locationData ? snapshot.locationData : null;
+  const zoomText = zoomData && typeof zoomData.joinUrl === "string"
+    ? `\nZOOM MEETING:\nJoin URL: ${zoomData.joinUrl}${zoomData.meetingId ? `\nMeeting ID: ${zoomData.meetingId}` : ""}${zoomData.password ? `\nPasscode: ${zoomData.password}` : ""}\n`
+    : "";
 
-Your meeting has been moved to a new time.
+  const text = `RESCHEDULED: ${snapshot.eventTitle} with ${snapshot.hostName}
 
 New Date: ${newDateStr}
 New Time: ${newTimeRangeStr}
 ${previousTimeStr ? `Previous Time: ${previousTimeStr}\n` : ""}Host: ${snapshot.hostName} (${snapshot.hostEmail})
-${locationText}${snapshot.rescheduleReason ? `Reason: "${snapshot.rescheduleReason}"\n` : ""}
+${locationText}${zoomText}${snapshot.rescheduleReason ? `Reason: "${snapshot.rescheduleReason}"\n` : ""}
 Manage / Reschedule: ${manageUrl}
+Cancel: ${cancelUrl}
+
+An updated calendar invite (.ics) is attached to this email.
 `;
 
   return { subject, html, text };
@@ -485,7 +601,8 @@ Manage / Reschedule: ${manageUrl}
 
 export function renderBookingRescheduledHost(
   snapshot: SnapshotPayload,
-  appUrl: string
+  appUrl: string,
+  manageUrl?: string
 ): { subject: string; html: string; text: string } {
   const { dateStr: newDateStr, timeRangeStr: newTimeRangeStr } = formatZonedRange(
     snapshot.startUtc,
@@ -512,14 +629,24 @@ export function renderBookingRescheduledHost(
   const safeReason = snapshot.rescheduleReason ? escapeHtml(snapshot.rescheduleReason) : "";
   const locationHtml = renderLocationHtml(snapshot, "HOST");
   const locationText = renderLocationText(snapshot, "HOST");
-  const hostZoomJoinUrl = snapshot.locationType === "ZOOM" && typeof snapshot.locationData?.joinUrl === "string" ? snapshot.locationData.joinUrl : null;
+  const zoomCtaHtml = renderZoomCtaHtml(snapshot);
+
+  const rescheduleUrl = manageUrl ? `${manageUrl}#reschedule` : dashboardUrl;
+  const cancelUrl = manageUrl ? `${manageUrl}#cancel` : dashboardUrl;
 
   const html = baseHtml(`
     <div style="text-align: center; margin-bottom: 20px;">
       <span class="badge badge-info">Rescheduled</span>
-      <h1>Booking Rescheduled</h1>
-      <p>The session with <strong>${safeAttendeeName}</strong> has been updated to a new time on your schedule.</p>
+      <h1>${safeEventTitle}</h1>
+      <div class="datetime-header">
+        🗓 ${newDateStr} &bull; ${newTimeRangeStr}
+      </div>
+      <p style="margin: 0; font-size: 13px; color: #64748b;">
+        Meeting with <strong>${safeAttendeeName}</strong> has been moved to a new time.
+      </p>
     </div>
+
+    ${zoomCtaHtml}
 
     <div class="details-box">
       <div class="details-row"><span class="details-label">Event:</span><span class="details-value">${safeEventTitle}</span></div>
@@ -539,21 +666,34 @@ export function renderBookingRescheduledHost(
       }
     </div>
 
-    <div style="text-align: center; margin-top: 24px;">
-      ${hostZoomJoinUrl ? `<a href="${escapeHtml(hostZoomJoinUrl)}" class="btn" style="background-color: #2D8CFF; margin-right: 8px; margin-bottom: 8px;" target="_blank" rel="noopener noreferrer">Join Zoom Meeting</a>` : ""}
-      <a href="${dashboardUrl}" class="btn" ${hostZoomJoinUrl ? 'style="background-color: #475569;"' : ""}>View in Dashboard</a>
+    <div class="action-links">
+      <p style="margin: 0 0 12px 0; font-size: 12px; color: #64748b;">
+        📎 An updated calendar invitation (.ics) is attached to this email.
+      </p>
+      <div style="margin-bottom: 12px;">
+        <a href="${dashboardUrl}" class="btn" style="background-color: #0069ff; margin: 4px;">View in Dashboard</a>
+        <a href="${rescheduleUrl}" class="btn" style="background-color: #f1f5f9; color: #0f172a !important; border: 1px solid #cbd5e1; margin: 4px;">Reschedule</a>
+        <a href="${cancelUrl}" class="btn" style="background-color: #ffffff; color: #dc2626 !important; border: 1px solid #fecaca; margin: 4px;">Cancel</a>
+      </div>
     </div>
   `);
 
-  const text = `BOOKING RESCHEDULED: ${snapshot.attendeeName} - ${snapshot.eventTitle}
+  const zoomData = snapshot.locationType === "ZOOM" && snapshot.locationData ? snapshot.locationData : null;
+  const zoomText = zoomData && typeof zoomData.joinUrl === "string"
+    ? `\nZOOM MEETING:\nJoin URL: ${zoomData.joinUrl}${zoomData.meetingId ? `\nMeeting ID: ${zoomData.meetingId}` : ""}${zoomData.password ? `\nPasscode: ${zoomData.password}` : ""}\n`
+    : "";
 
-The scheduled meeting has been moved to a new time.
+  const text = `RESCHEDULED: ${snapshot.attendeeName} - ${snapshot.eventTitle}
 
 Attendee: ${snapshot.attendeeName} (${snapshot.attendeeEmail})
 New Date: ${newDateStr}
 New Time: ${newTimeRangeStr}
-${previousTimeStr ? `Previous Time: ${previousTimeStr}\n` : ""}${locationText}${snapshot.rescheduleReason ? `Reason: "${snapshot.rescheduleReason}"\n` : ""}
+${previousTimeStr ? `Previous Time: ${previousTimeStr}\n` : ""}${locationText}${zoomText}${snapshot.rescheduleReason ? `Reason: "${snapshot.rescheduleReason}"\n` : ""}
 Dashboard: ${dashboardUrl}
+Reschedule: ${rescheduleUrl}
+Cancel: ${cancelUrl}
+
+An updated calendar invite (.ics) is attached to this email.
 `;
 
   return { subject, html, text };

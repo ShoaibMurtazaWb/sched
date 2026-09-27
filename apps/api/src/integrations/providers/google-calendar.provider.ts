@@ -262,6 +262,13 @@ export class GoogleCalendarProvider implements CalendarProvider {
       location: booking.location || undefined,
       start: { dateTime: booking.startTime.toISOString() },
       end: { dateTime: booking.endTime.toISOString() },
+      attendees: [
+        {
+          email: booking.attendeeEmail,
+          displayName: booking.attendeeName,
+          responseStatus: "accepted",
+        },
+      ],
       extendedProperties: {
         private: {
           schedBookingId: booking.id,
@@ -323,6 +330,7 @@ export class GoogleCalendarProvider implements CalendarProvider {
             location: eventPayload.location,
             start: eventPayload.start,
             end: eventPayload.end,
+            attendees: eventPayload.attendees,
             extendedProperties: eventPayload.extendedProperties,
           }),
         });

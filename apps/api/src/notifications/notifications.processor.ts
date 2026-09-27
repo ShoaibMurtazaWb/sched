@@ -206,10 +206,20 @@ export class NotificationsProcessor implements OnModuleInit, OnModuleDestroy {
         break;
       }
       case NotificationType.BOOKING_CONFIRMED_HOST: {
-        const rendered = renderBookingConfirmedHost(snapshot, this.appUrl);
+        const rendered = renderBookingConfirmedHost(snapshot, this.appUrl, manageUrl);
         subject = rendered.subject;
         html = rendered.html;
         text = rendered.text;
+
+        // Generate attached .ics calendar invite for host
+        const ics = this.buildIcsContent(snapshot, "REQUEST");
+        attachments = [
+          {
+            filename: `${snapshot.eventSlug}-${snapshot.bookingId.slice(0, 8)}.ics`,
+            content: ics,
+            contentType: "text/calendar; charset=utf-8; method=REQUEST",
+          },
+        ];
         break;
       }
       case NotificationType.BOOKING_RESCHEDULED_ATTENDEE: {
@@ -230,10 +240,20 @@ export class NotificationsProcessor implements OnModuleInit, OnModuleDestroy {
         break;
       }
       case NotificationType.BOOKING_RESCHEDULED_HOST: {
-        const rendered = renderBookingRescheduledHost(snapshot, this.appUrl);
+        const rendered = renderBookingRescheduledHost(snapshot, this.appUrl, manageUrl);
         subject = rendered.subject;
         html = rendered.html;
         text = rendered.text;
+
+        // Generate updated .ics calendar invite with incremented SEQUENCE for host
+        const ics = this.buildIcsContent(snapshot, "REQUEST");
+        attachments = [
+          {
+            filename: `${snapshot.eventSlug}-${snapshot.bookingId.slice(0, 8)}-v${snapshot.sequence}.ics`,
+            content: ics,
+            contentType: "text/calendar; charset=utf-8; method=REQUEST",
+          },
+        ];
         break;
       }
       case NotificationType.BOOKING_CANCELLED_ATTENDEE: {
