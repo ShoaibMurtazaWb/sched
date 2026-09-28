@@ -24,7 +24,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { SidePanel } from "@/components/ui/side-panel";
 import { api, apiUrl, type CurrentUser, type EventType } from "@/lib/api";
-import { fieldErrors, formatApiError } from "@/lib/api-error";
+import { ApiError, fieldErrors, formatApiError } from "@/lib/api-error";
 import type { LocationType, CustomQuestion, ScheduleResponse, ZoomIntegrationResponse } from "@sched/api-contract";
 
 const DURATION_PRESETS = [15, 30, 45, 60];
@@ -466,7 +466,11 @@ export function EventTypeDrawer({
       );
       setError(userMessage);
       const serverFields = fieldErrors(caught);
-      if (Object.keys(serverFields).length > 0) {
+      if (serverFields.slug || (caught instanceof ApiError && caught.body.error?.code === "EVENT_TYPE_SLUG_CONFLICT")) {
+        serverFields.title = "You already have an event type with this title in your account. Please choose a different title.";
+        setErrors((prev) => ({ ...prev, ...serverFields }));
+        toast.error("Event title already exists", "You already have an event type with this title in your account. Please choose a different title.");
+      } else if (Object.keys(serverFields).length > 0) {
         setErrors((prev) => ({ ...prev, ...serverFields }));
         toast.error("Please complete required fields", userMessage);
       } else {
@@ -557,25 +561,28 @@ export function EventTypeDrawer({
             value={title}
             onChange={(e) => {
               handleTitleChange(e.target.value);
-              if (errors.title) {
+              if (errors.title || errors.slug) {
                 setErrors((prev) => {
                   const copy = { ...prev };
                   delete copy.title;
+                  delete copy.slug;
                   return copy;
                 });
               }
             }}
             placeholder="e.g. 30 Minute Meeting"
             className={`w-full text-base font-bold text-text-main bg-surface-subtle/50 hover:bg-surface-subtle focus:bg-surface border focus:ring-2 focus:outline-none transition-all pl-9 pr-3.5 py-2 rounded-xl ${
-              errors.title
+              errors.title || errors.slug
                 ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/20"
                 : "border-border-subtle focus:border-brand focus:ring-brand/20"
             }`}
           />
         </div>
         <p className="text-xs text-text-muted font-medium pl-1">One-on-One</p>
-        {errors.title && (
-          <p className="text-xs text-rose-500 font-medium pl-1 animate-in fade-in-50">{errors.title}</p>
+        {(errors.title || errors.slug) && (
+          <p className="text-xs text-rose-500 font-medium pl-1 animate-in fade-in-50">
+            {errors.title || (errors.slug === "taken" ? "You already have an event type with this title in your account. Please choose a different title." : errors.slug)}
+          </p>
         )}
       </div>
 

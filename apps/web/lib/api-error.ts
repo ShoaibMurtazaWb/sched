@@ -161,6 +161,9 @@ export function formatApiError(
 
     // 409 Conflict
     if (status === 409) {
+      if (code === "EVENT_TYPE_SLUG_CONFLICT" || code.includes("SLUG")) {
+        return "You already have an event type with this title in your account. Please choose a different title.";
+      }
       if (code === "EMAIL_CONFLICT" || code.includes("EMAIL")) {
         return "An account with this email already exists.";
       }
