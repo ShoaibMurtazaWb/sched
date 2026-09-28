@@ -120,6 +120,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Escape key listener to close mobile drawer and dropdowns
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        if (isMobileMenuOpen) setIsMobileMenuOpen(false);
+        if (isDropdownOpen) setIsDropdownOpen(false);
+        if (isMobileDropdownOpen) setIsMobileDropdownOpen(false);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMobileMenuOpen, isDropdownOpen, isMobileDropdownOpen]);
+
   async function checkAuth() {
     setIsLoading(true);
     setErrorMessage(null);
@@ -242,6 +255,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     [pathname]
   );
 
+  const allNavItems = useMemo(
+    () => [...mainNavItems, ...secondaryNavItems],
+    [mainNavItems, secondaryNavItems]
+  );
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--bg-canvas)]">
@@ -288,7 +306,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] flex flex-col antialiased selection:bg-blue-600 selection:text-white">
-      {/* Mobile Navigation Drawer Sheet (Modern, clean, mobile-first Calendly-style UX) */}
+      {/* Mobile Navigation Drawer Sheet (Sched Mobile Sidebar) */}
       <div
         className={`fixed inset-0 z-50 md:hidden transition-all duration-300 ${
           isMobileMenuOpen ? "pointer-events-auto visible" : "pointer-events-none invisible"
@@ -298,26 +316,47 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       >
         {/* Backdrop with Smooth Fade Animation */}
         <div
-          className={`fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300 ease-in-out ${
+          className={`fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity duration-300 ease-in-out ${
             isMobileMenuOpen ? "opacity-100" : "opacity-0"
           }`}
           onClick={() => setIsMobileMenuOpen(false)}
           aria-label="Close navigation menu"
         />
 
-        {/* Drawer Panel with Slide-in / Slide-out Animation */}
+        {/* Drawer Panel with Slide-in / Slide-out Animation (300ms ease-in-out) */}
         <div
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          className={`fixed inset-y-0 left-0 z-50 flex flex-col w-[290px] max-w-[85vw] bg-white border-r border-neutral-200 shadow-2xl transition-transform duration-300 ease-out will-change-transform ${
+          className={`fixed inset-y-0 left-0 z-50 flex flex-col w-[280px] max-w-[85vw] bg-surface border-r border-border-subtle shadow-2xl transition-transform duration-300 ease-in-out will-change-transform ${
             isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          {/* Drawer Header: User Identity & Crisp Close Button */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 shrink-0">
+          {/* Drawer Top Header: Sched Brand & Close Button */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle shrink-0">
+            <Link
+              href="/dashboard"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-2.5"
+            >
+              <Logo className="h-7 w-7 shrink-0" />
+              <span className="font-bold tracking-tight text-text-main text-lg">Sched</span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted hover:text-text-main hover:bg-surface-subtle active:scale-95 transition-all cursor-pointer shrink-0"
+              aria-label="Close navigation menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* User Identity Mini Card */}
+          <div className="px-5 py-3 border-b border-border-subtle bg-surface-subtle/50 shrink-0">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold text-sm shadow-2xs select-none overflow-hidden">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand font-bold text-sm shadow-2xs select-none overflow-hidden">
                 {user.avatarUrl ? (
                   <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
                 ) : (
@@ -325,98 +364,41 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-neutral-900 truncate leading-snug">{user.name}</p>
-                <p className="text-xs text-neutral-500 truncate leading-tight">@{user.username}</p>
+                <p className="text-sm font-semibold text-text-main truncate leading-snug">{user.name}</p>
+                <p className="text-xs text-text-muted truncate leading-tight">@{user.username}</p>
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer shrink-0"
-              aria-label="Close navigation menu"
-            >
-              <X className="h-5 w-5" />
-            </button>
           </div>
 
-          {/* Navigation Items (Left-aligned, clean vertical rhythm, NO Create button) */}
-          <div className="flex-1 overflow-y-auto overscroll-contain px-3.5 py-4 space-y-1.5">
-            {mainNavItems.map((item) => {
+          {/* Sched Navigation Items (Scheduling, Meetings, Availability, Integrations & apps, Analytics, Settings) */}
+          <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 space-y-1">
+            {allNavItems.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
                   key={item.label}
                   href={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`group relative flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer ${
+                  className={`group relative flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer ${
                     item.active
-                      ? "bg-blue-50 text-blue-600 font-semibold"
-                      : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900"
+                      ? "bg-brand/10 text-brand font-semibold"
+                      : "text-text-sub hover:bg-surface-subtle hover:text-text-main"
                   }`}
                 >
                   {item.active && (
-                    <span className="absolute left-0 top-2.5 bottom-2.5 w-1 bg-blue-600 rounded-r-full" />
+                    <span className="absolute left-0 top-2 bottom-2 w-1 bg-brand rounded-r-full" />
                   )}
                   <Icon
                     className={`h-5 w-5 shrink-0 transition-colors ${
                       item.active
-                        ? "text-blue-600 stroke-[2.2]"
-                        : "text-neutral-500 group-hover:text-neutral-700 stroke-[1.8]"
+                        ? "text-brand stroke-[2.2]"
+                        : "text-text-muted group-hover:text-text-main stroke-[1.8]"
                     }`}
                   />
                   <span className="truncate">{item.label}</span>
                 </Link>
               );
             })}
-
-            {/* Analytics Item */}
-            <Link
-              href="/dashboard/analytics"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`group relative flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer ${
-                pathname.startsWith("/dashboard/analytics")
-                  ? "bg-blue-50 text-blue-600 font-semibold"
-                  : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900"
-              }`}
-            >
-              {pathname.startsWith("/dashboard/analytics") && (
-                <span className="absolute left-0 top-2.5 bottom-2.5 w-1 bg-blue-600 rounded-r-full" />
-              )}
-              <BarChart3
-                className={`h-5 w-5 shrink-0 transition-colors ${
-                  pathname.startsWith("/dashboard/analytics")
-                    ? "text-blue-600 stroke-[2.2]"
-                    : "text-neutral-500 group-hover:text-neutral-700 stroke-[1.8]"
-                }`}
-              />
-              <span className="truncate">Analytics</span>
-            </Link>
-          </div>
-
-          {/* Bottom Section: Settings (Anchored cleanly at bottom with mobile safe-area spacing) */}
-          <div className="p-3.5 border-t border-neutral-100 shrink-0 bg-neutral-50/50 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
-            <Link
-              href="/dashboard/settings"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`group relative flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer ${
-                pathname.startsWith("/dashboard/settings")
-                  ? "bg-blue-50 text-blue-600 font-semibold"
-                  : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
-              }`}
-            >
-              {pathname.startsWith("/dashboard/settings") && (
-                <span className="absolute left-0 top-2.5 bottom-2.5 w-1 bg-blue-600 rounded-r-full" />
-              )}
-              <Settings
-                className={`h-5 w-5 shrink-0 transition-colors ${
-                  pathname.startsWith("/dashboard/settings")
-                    ? "text-blue-600 stroke-[2.2]"
-                    : "text-neutral-500 group-hover:text-neutral-700 stroke-[1.8]"
-                }`}
-              />
-              <span className="truncate">Settings</span>
-            </Link>
           </div>
         </div>
       </div>
@@ -509,13 +491,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       href={item.href}
                       className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl text-center transition-all ${
                         item.active
-                          ? "bg-blue-50 text-blue-600 font-semibold shadow-2xs"
-                          : "text-neutral-700 hover:bg-neutral-100 hover:text-blue-600"
+                          ? "bg-brand/10 text-brand font-semibold shadow-2xs"
+                          : "text-text-sub hover:bg-surface-subtle hover:text-brand"
                       }`}
                       title={item.label}
                     >
-                      <Icon className={`h-5 w-5 mb-1 shrink-0 ${item.active ? "text-blue-600" : "text-neutral-600"}`} />
-                      <span className={`text-[10px] leading-tight line-clamp-1 font-semibold ${item.active ? "text-blue-600 font-bold" : "text-neutral-700"}`}>
+                      <Icon className={`h-5 w-5 mb-1 shrink-0 ${item.active ? "text-brand" : "text-text-muted"}`} />
+                      <span className={`text-[10px] leading-tight line-clamp-1 font-semibold ${item.active ? "text-brand font-bold" : "text-text-sub"}`}>
                         {item.label}
                       </span>
                     </Link>
@@ -528,16 +510,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     href={item.href}
                     className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-[background-color,color] duration-150 ${
                       item.active
-                        ? "bg-blue-50 text-blue-600 font-semibold"
-                        : "text-neutral-700 hover:bg-neutral-100 hover:text-blue-600"
+                        ? "bg-brand/10 text-brand font-semibold"
+                        : "text-text-sub hover:bg-surface-subtle hover:text-brand"
                     }`}
                   >
                     <Icon
                       className={`h-4 w-4 shrink-0 ${
-                        item.active ? "text-blue-600" : "text-neutral-600"
+                        item.active ? "text-brand" : "text-text-muted"
                       }`}
                     />
-                    <span className={`whitespace-nowrap overflow-hidden text-ellipsis ${item.active ? "text-blue-600 font-bold" : "text-neutral-800"}`}>
+                    <span className={`whitespace-nowrap overflow-hidden text-ellipsis ${item.active ? "text-brand font-bold" : "text-text-main"}`}>
                       {item.label}
                     </span>
                   </Link>
@@ -547,7 +529,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Bottom Section: Analytics & Settings */}
-          <div className={`mt-auto shrink-0 border-t border-[var(--border-subtle)] ${isCollapsed ? "px-3" : "px-5"} pt-3 pb-4 transition-[padding] duration-500`}>
+          <div className={`mt-auto shrink-0 border-t border-border-subtle ${isCollapsed ? "px-3" : "px-5"} pt-3 pb-4 transition-[padding] duration-500`}>
             <nav className="space-y-1">
               {secondaryNavItems.map((item) => {
                 const Icon = item.icon;
@@ -558,13 +540,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       href={item.href}
                       className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl text-center transition-all ${
                         item.active
-                          ? "bg-blue-50 text-blue-600 font-semibold shadow-2xs"
-                          : "text-neutral-700 hover:bg-neutral-100 hover:text-blue-600"
+                          ? "bg-brand/10 text-brand font-semibold shadow-2xs"
+                          : "text-text-sub hover:bg-surface-subtle hover:text-brand"
                       }`}
                       title={item.label}
                     >
-                      <Icon className={`h-5 w-5 mb-1 shrink-0 ${item.active ? "text-blue-600" : "text-neutral-600"}`} />
-                      <span className={`text-[10px] leading-tight line-clamp-1 font-semibold ${item.active ? "text-blue-600 font-bold" : "text-neutral-700"}`}>
+                      <Icon className={`h-5 w-5 mb-1 shrink-0 ${item.active ? "text-brand" : "text-text-muted"}`} />
+                      <span className={`text-[10px] leading-tight line-clamp-1 font-semibold ${item.active ? "text-brand font-bold" : "text-text-sub"}`}>
                         {item.label}
                       </span>
                     </Link>
@@ -577,12 +559,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     href={item.href}
                     className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-colors ${
                       item.active
-                        ? "bg-blue-50 text-blue-600 font-semibold"
-                        : "text-neutral-700 hover:bg-neutral-100 hover:text-blue-600"
+                        ? "bg-brand/10 text-brand font-semibold"
+                        : "text-text-sub hover:bg-surface-subtle hover:text-brand"
                     }`}
                   >
-                    <Icon className={`h-4 w-4 shrink-0 ${item.active ? "text-blue-600" : "text-neutral-600"}`} />
-                    <span className={`whitespace-nowrap overflow-hidden text-ellipsis ${item.active ? "text-blue-600 font-bold" : "text-neutral-800"}`}>
+                    <Icon className={`h-4 w-4 shrink-0 ${item.active ? "text-brand" : "text-text-muted"}`} />
+                    <span className={`whitespace-nowrap overflow-hidden text-ellipsis ${item.active ? "text-brand font-bold" : "text-text-main"}`}>
                       {item.label}
                     </span>
                   </Link>
@@ -593,21 +575,21 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         {/* Main Content Area */}
-        <div className="flex-1 min-w-0 flex flex-col min-h-screen bg-[var(--bg-canvas)]">
-          {/* Mobile Header Bar (< md) - Compact 56px, left hamburger + Sched brand, right avatar with mobile menu */}
-          <header className="md:hidden sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-neutral-200 bg-white px-4 shadow-2xs shrink-0">
+        <div className="flex-1 min-w-0 flex flex-col min-h-screen bg-canvas">
+          {/* Mobile Header Bar (< md) - Compact 56px, left hamburger + Sched brand, right theme switcher & avatar */}
+          <header className="md:hidden sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-border-subtle bg-surface px-4 shadow-2xs shrink-0">
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(true)}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50 active:bg-neutral-100 transition-colors cursor-pointer"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle bg-surface text-text-main hover:bg-surface-subtle active:bg-surface-muted transition-colors cursor-pointer"
                 aria-label="Open navigation menu"
               >
                 <Menu className="h-5 w-5" />
               </button>
               <Link href="/dashboard" className="flex items-center gap-2">
                 <Logo className="h-7 w-7 shrink-0" />
-                <span className="font-bold tracking-tight text-neutral-900 text-lg">Sched</span>
+                <span className="font-bold tracking-tight text-text-main text-lg">Sched</span>
               </Link>
             </div>
 
@@ -619,26 +601,26 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 <button
                   type="button"
                   onClick={() => setIsMobileDropdownOpen((prev) => !prev)}
-                  className="flex items-center rounded-full p-0.5 border border-transparent hover:border-neutral-200 transition-all cursor-pointer"
+                  className="flex items-center rounded-full p-0.5 border border-transparent hover:border-border-subtle transition-all cursor-pointer"
                   aria-expanded={isMobileDropdownOpen}
                   aria-label="User account menu"
                 >
                   <div className="relative">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold select-none shadow-2xs overflow-hidden">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white text-xs font-bold select-none shadow-2xs overflow-hidden">
                       {user.avatarUrl ? (
                         <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
                       ) : (
                         user.name.charAt(0).toUpperCase()
                       )}
                     </div>
-                    <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+                    <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-surface" />
                   </div>
                 </button>
 
                 {isMobileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-xl border border-neutral-200 bg-white p-2 shadow-xl z-50 animate-in fade-in-0 zoom-in-95 duration-150">
-                    <div className="flex items-center gap-2.5 p-2 rounded-lg bg-neutral-50 border border-neutral-100 mb-1">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-xs">
+                  <div className="absolute right-0 mt-2 w-64 rounded-xl border border-border-subtle bg-surface p-2 shadow-xl z-50 animate-in fade-in-0 zoom-in-95 duration-150">
+                    <div className="flex items-center gap-2.5 p-2 rounded-lg bg-surface-subtle border border-border-subtle mb-1">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-white font-bold text-xs">
                         {user.avatarUrl ? (
                           <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
                         ) : (
@@ -646,19 +628,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-neutral-900 truncate">{user.name}</p>
-                        <p className="text-[11px] font-mono text-neutral-500 truncate">@{user.username}</p>
+                        <p className="text-xs font-bold text-text-main truncate">{user.name}</p>
+                        <p className="text-[11px] font-mono text-text-muted truncate">@{user.username}</p>
                       </div>
                     </div>
 
                     {user.timezone && (
-                      <div className="px-2.5 py-1.5 mb-1 flex items-center justify-between text-[11px] font-mono text-neutral-600 bg-neutral-50 rounded-md">
+                      <div className="px-2.5 py-1.5 mb-1 flex items-center justify-between text-[11px] font-mono text-text-sub bg-surface-subtle rounded-md">
                         <span className="flex items-center gap-1.5 truncate">
-                          <Globe className="h-3 w-3 text-neutral-400 shrink-0" />
+                          <Globe className="h-3 w-3 text-text-muted shrink-0" />
                           <span className="truncate">{user.timezone}</span>
                         </span>
                         {currentTime && (
-                          <span className="text-black font-semibold tabular-nums shrink-0">{currentTime}</span>
+                          <span className="text-text-main font-semibold tabular-nums shrink-0">{currentTime}</span>
                         )}
                       </div>
                     )}
@@ -667,25 +649,25 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       href={`/public/${user.username}`}
                       target="_blank"
                       onClick={() => setIsMobileDropdownOpen(false)}
-                      className="flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 transition-colors"
+                      className="flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-semibold text-text-main hover:bg-surface-subtle transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        <UserIcon className="h-3.5 w-3.5 text-neutral-600" />
+                        <UserIcon className="h-3.5 w-3.5 text-text-muted" />
                         <span>Public Profile</span>
                       </div>
-                      <ExternalLink className="h-3 w-3 text-neutral-400" />
+                      <ExternalLink className="h-3 w-3 text-text-muted" />
                     </Link>
 
                     <Link
                       href="/dashboard/settings"
                       onClick={() => setIsMobileDropdownOpen(false)}
-                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 transition-colors"
+                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-text-main hover:bg-surface-subtle transition-colors"
                     >
-                      <Settings className="h-3.5 w-3.5 text-neutral-600" />
+                      <Settings className="h-3.5 w-3.5 text-text-muted" />
                       <span>Account Settings</span>
                     </Link>
 
-                    <div className="my-1 border-t border-neutral-100" />
+                    <div className="my-1 border-t border-border-subtle" />
 
                     <button
                       type="button"
@@ -693,7 +675,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                         setIsMobileDropdownOpen(false);
                         void logout();
                       }}
-                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-500/10 transition-colors cursor-pointer"
                     >
                       <LogOut className="h-3.5 w-3.5" />
                       <span>Sign out</span>
@@ -704,8 +686,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Top Bar with User Profile Dropdown (Full Width, Pure White Header with increased height) */}
-          <header className="hidden md:flex h-20 w-full items-center justify-end bg-white border-b border-neutral-200 px-8 sm:px-12 md:px-16 gap-4">
+          {/* Top Bar with User Profile Dropdown (Full Width, Header with Sched design tokens) */}
+          <header className="hidden md:flex h-20 w-full items-center justify-end bg-surface border-b border-border-subtle px-8 sm:px-12 md:px-16 gap-4">
             <ThemeSwitcher align="right" />
 
             {/* User Profile Dropdown Menu in Top Navbar */}
@@ -713,22 +695,22 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => setIsDropdownOpen((prev) => !prev)}
-                className="flex items-center gap-2.5 rounded-full p-1.5 pl-2.5 hover:bg-neutral-50 border border-transparent hover:border-neutral-200 transition-all cursor-pointer"
+                className="flex items-center gap-2.5 rounded-full p-1.5 pl-2.5 hover:bg-surface-subtle border border-transparent hover:border-border-subtle transition-all cursor-pointer"
                 aria-expanded={isDropdownOpen}
                 aria-label="User account menu"
               >
                 <div className="relative">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold select-none shadow-2xs overflow-hidden">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white text-xs font-bold select-none shadow-2xs overflow-hidden">
                     {user.avatarUrl ? (
                       <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
                     ) : (
                       user.name.charAt(0).toUpperCase()
                     )}
                   </div>
-                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-surface" />
                 </div>
                 <ChevronDown
-                  className={`h-4 w-4 text-neutral-700 transition-transform duration-150 ${
+                  className={`h-4 w-4 text-text-sub transition-transform duration-150 ${
                     isDropdownOpen ? "rotate-180" : ""
                   }`}
                 />
@@ -736,9 +718,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
               {/* User Dropdown Menu Card */}
               {isDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-72 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2 shadow-xl z-50 animate-in fade-in-0 zoom-in-95 duration-150">
-                  <div className="flex items-center gap-3 p-2.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-subtle)] mb-1">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-xs select-none shadow-2xs overflow-hidden">
+                <div className="absolute right-0 mt-2 w-72 rounded-xl border border-border-subtle bg-surface p-2 shadow-xl z-50 animate-in fade-in-0 zoom-in-95 duration-150">
+                  <div className="flex items-center gap-3 p-2.5 rounded-lg bg-surface-subtle border border-border-subtle mb-1">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white font-bold text-xs select-none shadow-2xs overflow-hidden">
                       {user.avatarUrl ? (
                         <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
                       ) : (
@@ -746,20 +728,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-black truncate">{user.name}</p>
-                      <p className="text-[11px] font-mono text-neutral-600 truncate">@{user.username}</p>
-                      <p className="text-[10px] text-neutral-500 truncate">{user.email}</p>
+                      <p className="text-xs font-semibold text-text-main truncate">{user.name}</p>
+                      <p className="text-[11px] font-mono text-text-sub truncate">@{user.username}</p>
+                      <p className="text-[10px] text-text-muted truncate">{user.email}</p>
                     </div>
                   </div>
 
                   {user.timezone && (
-                    <div className="px-2.5 py-1.5 mb-1 flex items-center justify-between text-[11px] font-mono text-neutral-600 bg-neutral-50 rounded-md">
+                    <div className="px-2.5 py-1.5 mb-1 flex items-center justify-between text-[11px] font-mono text-text-sub bg-surface-subtle rounded-md">
                       <span className="flex items-center gap-1.5 truncate">
-                        <Globe className="h-3 w-3 text-neutral-400 shrink-0" />
+                        <Globe className="h-3 w-3 text-text-muted shrink-0" />
                         <span className="truncate">{user.timezone}</span>
                       </span>
                       {currentTime && (
-                        <span className="text-black font-semibold tabular-nums shrink-0">{currentTime}</span>
+                        <span className="text-text-main font-semibold tabular-nums shrink-0">{currentTime}</span>
                       )}
                     </div>
                   )}
@@ -768,25 +750,25 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     href={`/public/${user.username}`}
                     target="_blank"
                     onClick={() => setIsDropdownOpen(false)}
-                    className="flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-semibold text-black hover:bg-[var(--bg-subtle)] transition-colors"
+                    className="flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-semibold text-text-main hover:bg-surface-subtle transition-colors"
                   >
                     <div className="flex items-center gap-2.5">
-                      <UserIcon className="h-3.5 w-3.5 text-black" />
+                      <UserIcon className="h-3.5 w-3.5 text-text-main" />
                       <span>Public Booking Profile</span>
                     </div>
-                    <ExternalLink className="h-3 w-3 text-neutral-500" />
+                    <ExternalLink className="h-3 w-3 text-text-muted" />
                   </Link>
 
                   <Link
                     href="/dashboard/settings"
                     onClick={() => setIsDropdownOpen(false)}
-                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-black hover:bg-[var(--bg-subtle)] transition-colors"
+                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-text-main hover:bg-surface-subtle transition-colors"
                   >
-                    <Settings className="h-3.5 w-3.5 text-black" />
+                    <Settings className="h-3.5 w-3.5 text-text-main" />
                     <span>Account Settings</span>
                   </Link>
 
-                  <div className="my-1 border-t border-[var(--border-subtle)]" />
+                  <div className="my-1 border-t border-border-subtle" />
 
                   <button
                     type="button"
@@ -794,7 +776,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       setIsDropdownOpen(false);
                       void logout();
                     }}
-                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-500/10 transition-colors cursor-pointer"
                   >
                     <LogOut className="h-3.5 w-3.5" />
                     <span>Sign out</span>
@@ -804,8 +786,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Dynamic Page Body (Full Width with generous responsive padding) */}
-          <main className="flex-1 w-full max-w-full px-4 sm:px-6 md:px-10 lg:px-14 py-4 sm:py-6 md:py-8">
+          {/* Dynamic Page Body (Full Width) */}
+          <main className="flex-1 w-full max-w-full min-w-0">
             {children}
           </main>
         </div>

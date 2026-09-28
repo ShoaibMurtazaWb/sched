@@ -283,7 +283,7 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="px-4 sm:px-6 md:px-10 lg:px-14 py-4 sm:py-6 md:py-8 space-y-6">
         <div>
           <Skeleton className="h-8 w-48 mb-2" />
           <Skeleton className="h-4 w-96" />
@@ -305,7 +305,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="w-full space-y-6 max-w-4xl pb-12">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-14 py-4 sm:py-6 md:py-8 w-full space-y-6 max-w-4xl pb-12">
       {/* Header */}
       <div>
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)]">

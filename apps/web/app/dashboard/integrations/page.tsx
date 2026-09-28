@@ -294,7 +294,7 @@ function IntegrationsContent() {
   }, [isConnected, selectedCalendarId, savedSelectedCalendarId, conflictCalendarIds, savedConflictCalendarIds]);
 
   return (
-    <div className="w-full space-y-6">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-14 py-4 sm:py-6 md:py-8 w-full space-y-6">
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
