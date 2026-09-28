@@ -33,9 +33,43 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
 import { api, apiUrl, type CurrentUser, type EventType } from "@/lib/api";
-import { ApiError, fieldErrors } from "@/lib/api-error";
+import { ApiError, fieldErrors, formatApiError } from "@/lib/api-error";
 
 const DURATION_PRESETS = [15, 30, 45, 60];
+
+function validateCustomUrl(val: string): string | null {
+  const trimmed = val.trim();
+  if (!trimmed) {
+    return "Meeting URL is required";
+  }
+  let testUrl = trimmed;
+  if (!/^https?:\/\//i.test(testUrl)) {
+    testUrl = `https://${testUrl}`;
+  }
+  try {
+    const parsed = new URL(testUrl);
+    if (!parsed.hostname || !parsed.hostname.includes(".")) {
+      return "Please enter a valid URL";
+    }
+  } catch {
+    return "Please enter a valid URL";
+  }
+  return null;
+}
+
+function validateInPersonAddress(val: string): string | null {
+  const trimmed = val.trim();
+  if (!trimmed) {
+    return "Meeting address is required";
+  }
+  if (trimmed.length < 3) {
+    return "Meeting address must be at least 3 characters";
+  }
+  if (trimmed.length > 300) {
+    return "Meeting address cannot exceed 300 characters";
+  }
+  return null;
+}
 
 function generateSlug(text: string): string {
   return text
@@ -68,7 +102,6 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
   // Location state
   const [locationType, setLocationType] = useState<LocationType>("ZOOM");
   const [inPersonAddress, setInPersonAddress] = useState("");
-  const [displayPublicAddress, setDisplayPublicAddress] = useState(false);
   const [inPersonNotes, setInPersonNotes] = useState("");
   const [videoNotes, setVideoNotes] = useState("");
   const [customLinkUrl, setCustomLinkUrl] = useState("");
@@ -141,7 +174,6 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
           const locData = data.location.data as Record<string, unknown>;
           if (data.location.type === "IN_PERSON") {
             setInPersonAddress(String(locData.address || ""));
-            setDisplayPublicAddress(Boolean(locData.displayPublicAddress));
             setInPersonNotes(String(locData.extraNotes || ""));
           } else if (data.location.type === "ZOOM") {
             setVideoNotes(String(locData.extraNotes || ""));
@@ -302,8 +334,8 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
         return {
           type: "IN_PERSON",
           data: {
-            address: inPersonAddress,
-            displayPublicAddress,
+            address: inPersonAddress.trim(),
+            displayPublicAddress: true,
             extraNotes: inPersonNotes || undefined,
           },
         };
@@ -318,27 +350,24 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
         return {
           type: "ATTENDEE_CALLS_HOST",
           data: {
-            hostPhoneNumber: attendeeCallsHostPhone,
+            hostPhoneNumber: attendeeCallsHostPhone.trim(),
             extraNotes: attendeeCallsHostNotes || undefined,
           },
         };
       case "CUSTOM_LINK":
-        return {
-          type: "CUSTOM_LINK",
-          data: {
-            url: customLinkUrl,
-            extraNotes: customLinkNotes || undefined,
-          },
-        };
       case "STATIC_VIDEO":
-      default:
+      default: {
+        const formattedUrl = /^https?:\/\//i.test(customLinkUrl.trim())
+          ? customLinkUrl.trim()
+          : `https://${customLinkUrl.trim()}`;
         return {
           type: "CUSTOM_LINK",
           data: {
-            url: customLinkUrl,
+            url: formattedUrl,
             extraNotes: customLinkNotes || undefined,
           },
         };
+      }
     }
   }
 
@@ -347,17 +376,44 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
     setError(null);
     setFields({});
 
+    const nextErrors: Record<string, string> = {};
+
+    if (!title.trim()) {
+      nextErrors.title = "Event title is required";
+    }
+
+    if (locationType === "IN_PERSON") {
+      const addrErr = validateInPersonAddress(inPersonAddress);
+      if (addrErr) nextErrors["location.data.address"] = addrErr;
+    } else if (locationType === "CUSTOM_LINK") {
+      const urlErr = validateCustomUrl(customLinkUrl);
+      if (urlErr) nextErrors["location.data.url"] = urlErr;
+    } else if (locationType === "ATTENDEE_CALLS_HOST") {
+      if (!attendeeCallsHostPhone.trim()) {
+        nextErrors["location.data.hostPhoneNumber"] = "Phone number is required";
+      } else if (attendeeCallsHostPhone.trim().length < 7) {
+        nextErrors["location.data.hostPhoneNumber"] = "Please enter a valid phone number";
+      }
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFields(nextErrors);
+      toast.error("Please complete required fields", "Check the highlighted fields to continue.");
+      return;
+    }
+
     if (locationType === "ZOOM" && isZoomConnected === false) {
       setError("Please connect your Zoom account first or choose another location.");
+      toast.error("Zoom account not connected", "Please connect Zoom or choose another location.");
       return;
     }
 
     const locationConfig = buildLocationConfig();
 
     const raw = {
-      title,
-      slug,
-      description,
+      title: title.trim(),
+      slug: (slug || generateSlug(title)).trim() || "meeting",
+      description: description.trim(),
       durationMinutes: duration,
       location: locationConfig,
       customQuestions: customQuestions.length > 0 ? customQuestions : undefined,
@@ -374,6 +430,7 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
         if (!next[pathKey]) next[pathKey] = issue.message;
       }
       setFields(next);
+      toast.error("Please complete required fields", "Check the highlighted fields to continue.");
       return;
     }
 
@@ -394,13 +451,22 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
       }
       router.push("/dashboard");
     } catch (caught) {
-      if (caught instanceof ApiError) {
-        setError(caught.message);
-        setFields(fieldErrors(caught));
-        toast.error("Could not save event type", caught.message);
+      const userMessage = formatApiError(
+        caught,
+        eventTypeId
+          ? "Unable to update event. Please try again."
+          : "Unable to create event. Please try again."
+      );
+      setError(userMessage);
+      const serverFields = fieldErrors(caught);
+      if (Object.keys(serverFields).length > 0) {
+        setFields((prev) => ({ ...prev, ...serverFields }));
+        toast.error("Please complete required fields", userMessage);
       } else {
-        setError("Could not save the event type.");
-        toast.error("Could not save the event type");
+        toast.error(
+          eventTypeId ? "Unable to update event" : "Unable to create event",
+          userMessage
+        );
       }
     } finally {
       setPending(false);
@@ -622,11 +688,22 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
                 {locationType === "IN_PERSON" && (
                   <>
                     <div className="space-y-1">
-                      <Label htmlFor="inPersonAddress">Venue / Street Address</Label>
+                      <Label htmlFor="inPersonAddress">
+                        Venue / Street Address <span className="text-rose-500">*</span>
+                      </Label>
                       <Input
                         id="inPersonAddress"
                         value={inPersonAddress}
-                        onChange={(e) => setInPersonAddress(e.target.value)}
+                        onChange={(e) => {
+                          setInPersonAddress(e.target.value);
+                          if (fields["location.data.address"]) {
+                            setFields((prev) => {
+                              const copy = { ...prev };
+                              delete copy["location.data.address"];
+                              return copy;
+                            });
+                          }
+                        }}
                         placeholder="e.g. 100 Montgomery St, Suite 400, San Francisco, CA"
                         required
                       />
@@ -635,18 +712,6 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
                           {fields["location.data.address"]}
                         </p>
                       )}
-                    </div>
-                    <div className="flex items-center gap-2 pt-1">
-                      <input
-                        type="checkbox"
-                        id="displayPublicAddress"
-                        checked={displayPublicAddress}
-                        onChange={(e) => setDisplayPublicAddress(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-neutral-900 focus:ring-neutral-900"
-                      />
-                      <label htmlFor="displayPublicAddress" className="text-xs text-[var(--text-secondary)] cursor-pointer">
-                        Display exact venue address publicly before booking (otherwise shown only after confirmation)
-                      </label>
                     </div>
                     <div className="space-y-1 pt-1">
                       <Label htmlFor="inPersonNotes">Arrival / Parking Instructions (Optional)</Label>
@@ -664,11 +729,22 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
                 {locationType === "CUSTOM_LINK" && (
                   <>
                     <div className="space-y-1">
-                      <Label htmlFor="customLinkUrl">Custom Meeting URL</Label>
+                      <Label htmlFor="customLinkUrl">
+                        Custom Meeting URL <span className="text-rose-500">*</span>
+                      </Label>
                       <Input
                         id="customLinkUrl"
                         value={customLinkUrl}
-                        onChange={(e) => setCustomLinkUrl(e.target.value)}
+                        onChange={(e) => {
+                          setCustomLinkUrl(e.target.value);
+                          if (fields["location.data.url"]) {
+                            setFields((prev) => {
+                              const copy = { ...prev };
+                              delete copy["location.data.url"];
+                              return copy;
+                            });
+                          }
+                        }}
                         placeholder="https://app.customroom.com/your-room"
                         required
                       />

@@ -39,6 +39,10 @@ const SENSITIVE_PATTERNS = [
   /stack trace/i,
   /internal server error/i,
   /at\s+[a-zA-Z0-9_.]+\s+\(/i,
+  /bad request/i,
+  /request validation/i,
+  /validation failed/i,
+  /unexpected error/i,
 ];
 
 function isUnsafeMessage(msg: string): boolean {

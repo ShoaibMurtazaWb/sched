@@ -24,10 +24,44 @@ import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { SidePanel } from "@/components/ui/side-panel";
 import { api, apiUrl, type CurrentUser, type EventType } from "@/lib/api";
-import { ApiError, fieldErrors } from "@/lib/api-error";
+import { fieldErrors, formatApiError } from "@/lib/api-error";
 import type { LocationType, CustomQuestion, ScheduleResponse, ZoomIntegrationResponse } from "@sched/api-contract";
 
 const DURATION_PRESETS = [15, 30, 45, 60];
+
+function validateCustomUrl(val: string): string | null {
+  const trimmed = val.trim();
+  if (!trimmed) {
+    return "Meeting URL is required";
+  }
+  let testUrl = trimmed;
+  if (!/^https?:\/\//i.test(testUrl)) {
+    testUrl = `https://${testUrl}`;
+  }
+  try {
+    const parsed = new URL(testUrl);
+    if (!parsed.hostname || !parsed.hostname.includes(".")) {
+      return "Please enter a valid URL";
+    }
+  } catch {
+    return "Please enter a valid URL";
+  }
+  return null;
+}
+
+function validateInPersonAddress(val: string): string | null {
+  const trimmed = val.trim();
+  if (!trimmed) {
+    return "Meeting address is required";
+  }
+  if (trimmed.length < 3) {
+    return "Meeting address must be at least 3 characters";
+  }
+  if (trimmed.length > 300) {
+    return "Meeting address cannot exceed 300 characters";
+  }
+  return null;
+}
 
 const WEEK_DAYS = [
   { day: 0, name: "Sunday", short: "S" },
@@ -97,7 +131,6 @@ export function EventTypeDrawer({
   // Location Fields
   const [locationType, setLocationType] = useState<LocationType | null>(null);
   const [inPersonAddress, setInPersonAddress] = useState("");
-  const [displayPublicAddress, setDisplayPublicAddress] = useState(false);
   const [inPersonNotes, setInPersonNotes] = useState("");
   const [videoNotes, setVideoNotes] = useState("");
   const [customLinkUrl, setCustomLinkUrl] = useState("");
@@ -165,7 +198,6 @@ export function EventTypeDrawer({
       setDescription("");
       setLocationType(null);
       setInPersonAddress("");
-      setDisplayPublicAddress(false);
       setInPersonNotes("");
       setVideoNotes("");
       setCustomLinkUrl("");
@@ -203,7 +235,6 @@ export function EventTypeDrawer({
           const locData = (data.location.data || {}) as Record<string, unknown>;
           if (data.location.type === "IN_PERSON") {
             setInPersonAddress(String(locData.address || ""));
-            setDisplayPublicAddress(Boolean(locData.displayPublicAddress));
             setInPersonNotes(String(locData.extraNotes || ""));
           } else if (data.location.type === "ZOOM") {
             setVideoNotes(String(locData.extraNotes || ""));
@@ -326,15 +357,41 @@ export function EventTypeDrawer({
     setError(null);
     setErrors({});
 
-    if (!locationType) {
-      setError("Please select a location for this event type.");
-      setOpenSections((prev) => ({ ...prev, location: true }));
-      setIsSaving(false);
-      return;
+    const newErrors: Record<string, string> = {};
+
+    if (!title.trim()) {
+      newErrors.title = "Event title is required";
     }
 
-    if (locationType === "ZOOM" && isZoomConnected === false) {
-      setError("Please connect your Zoom account first or choose another location.");
+    if (!locationType) {
+      newErrors.location = "Please select a location for this event type.";
+    } else if (locationType === "IN_PERSON") {
+      const addrErr = validateInPersonAddress(inPersonAddress);
+      if (addrErr) newErrors.inPersonAddress = addrErr;
+    } else if (locationType === "CUSTOM_LINK") {
+      const urlErr = validateCustomUrl(customLinkUrl);
+      if (urlErr) newErrors.customLinkUrl = urlErr;
+    } else if (locationType === "ATTENDEE_CALLS_HOST") {
+      if (!attendeeCallsHostPhone.trim()) {
+        newErrors.attendeeCallsHostPhone = "Phone number is required";
+      } else if (attendeeCallsHostPhone.trim().length < 7) {
+        newErrors.attendeeCallsHostPhone = "Please enter a valid phone number";
+      }
+    } else if (locationType === "ZOOM" && isZoomConnected === false) {
+      newErrors.location = "Please connect your Zoom account first or choose another location.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      if (
+        newErrors.location ||
+        newErrors.inPersonAddress ||
+        newErrors.customLinkUrl ||
+        newErrors.attendeeCallsHostPhone
+      ) {
+        setOpenSections((prev) => ({ ...prev, location: true }));
+      }
+      toast.error("Please complete required fields", "Check the highlighted fields to continue.");
       setIsSaving(false);
       return;
     }
@@ -343,27 +400,30 @@ export function EventTypeDrawer({
     let locationData: Record<string, unknown> = {};
     if (locationType === "ZOOM") {
       locationData = {
-        extraNotes: videoNotes,
+        extraNotes: videoNotes || undefined,
       };
     } else if (locationType === "IN_PERSON") {
       locationData = {
-        address: inPersonAddress,
-        displayPublicAddress,
-        extraNotes: inPersonNotes,
+        address: inPersonAddress.trim(),
+        displayPublicAddress: true,
+        extraNotes: inPersonNotes || undefined,
       };
     } else if (locationType === "CUSTOM_LINK" || (locationType as string) === "STATIC_VIDEO") {
+      const formattedUrl = /^https?:\/\//i.test(customLinkUrl.trim())
+        ? customLinkUrl.trim()
+        : `https://${customLinkUrl.trim()}`;
       locationData = {
-        url: customLinkUrl,
-        extraNotes: customLinkNotes,
+        url: formattedUrl,
+        extraNotes: customLinkNotes || undefined,
       };
     } else if (locationType === "HOST_CALLS_ATTENDEE") {
       locationData = {
-        extraNotes: hostCallsAttendeeNotes,
+        extraNotes: hostCallsAttendeeNotes || undefined,
       };
     } else if (locationType === "ATTENDEE_CALLS_HOST") {
       locationData = {
-        hostPhoneNumber: attendeeCallsHostPhone,
-        extraNotes: attendeeCallsHostNotes,
+        hostPhoneNumber: attendeeCallsHostPhone.trim(),
+        extraNotes: attendeeCallsHostNotes || undefined,
       };
     }
 
@@ -398,11 +458,22 @@ export function EventTypeDrawer({
       onSaved();
       onClose();
     } catch (caught: unknown) {
-      if (caught instanceof ApiError) {
-        setError(caught.message);
-        setErrors(fieldErrors(caught));
+      const userMessage = formatApiError(
+        caught,
+        eventTypeId
+          ? "Unable to update event. Please try again."
+          : "Unable to create event. Please try again."
+      );
+      setError(userMessage);
+      const serverFields = fieldErrors(caught);
+      if (Object.keys(serverFields).length > 0) {
+        setErrors((prev) => ({ ...prev, ...serverFields }));
+        toast.error("Please complete required fields", userMessage);
       } else {
-        setError("Failed to save event type. Please check all fields.");
+        toast.error(
+          eventTypeId ? "Unable to update event" : "Unable to create event",
+          userMessage
+        );
       }
     } finally {
       setIsSaving(false);
@@ -484,13 +555,28 @@ export function EventTypeDrawer({
             id="event-type-title"
             type="text"
             value={title}
-            onChange={(e) => handleTitleChange(e.target.value)}
+            onChange={(e) => {
+              handleTitleChange(e.target.value);
+              if (errors.title) {
+                setErrors((prev) => {
+                  const copy = { ...prev };
+                  delete copy.title;
+                  return copy;
+                });
+              }
+            }}
             placeholder="e.g. 30 Minute Meeting"
-            className="w-full text-base font-bold text-text-main bg-surface-subtle/50 hover:bg-surface-subtle focus:bg-surface border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none transition-all pl-9 pr-3.5 py-2 rounded-xl"
+            className={`w-full text-base font-bold text-text-main bg-surface-subtle/50 hover:bg-surface-subtle focus:bg-surface border focus:ring-2 focus:outline-none transition-all pl-9 pr-3.5 py-2 rounded-xl ${
+              errors.title
+                ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/20"
+                : "border-border-subtle focus:border-brand focus:ring-brand/20"
+            }`}
           />
         </div>
         <p className="text-xs text-text-muted font-medium pl-1">One-on-One</p>
-        {errors.title && <p className="text-xs text-rose-500 pl-1">{errors.title}</p>}
+        {errors.title && (
+          <p className="text-xs text-rose-500 font-medium pl-1 animate-in fade-in-50">{errors.title}</p>
+        )}
       </div>
 
       {error && (
@@ -642,7 +728,16 @@ export function EventTypeDrawer({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setLocationType(locationType === "ZOOM" ? null : "ZOOM")}
+                    onClick={() => {
+                      setLocationType(locationType === "ZOOM" ? null : "ZOOM");
+                      if (errors.location) {
+                        setErrors((prev) => {
+                          const copy = { ...prev };
+                          delete copy.location;
+                          return copy;
+                        });
+                      }
+                    }}
                     className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
                       locationType === "ZOOM"
                         ? isZoomConnected === false
@@ -669,7 +764,16 @@ export function EventTypeDrawer({
 
                   <button
                     type="button"
-                    onClick={() => setLocationType(locationType === "IN_PERSON" ? null : "IN_PERSON")}
+                    onClick={() => {
+                      setLocationType(locationType === "IN_PERSON" ? null : "IN_PERSON");
+                      if (errors.location) {
+                        setErrors((prev) => {
+                          const copy = { ...prev };
+                          delete copy.location;
+                          return copy;
+                        });
+                      }
+                    }}
                     className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
                       locationType === "IN_PERSON"
                         ? "border-brand bg-brand/10 text-brand shadow-2xs ring-1 ring-brand/30"
@@ -685,13 +789,20 @@ export function EventTypeDrawer({
 
                   <button
                     type="button"
-                    onClick={() =>
+                    onClick={() => {
                       setLocationType(
                         locationType === "HOST_CALLS_ATTENDEE" || locationType === "ATTENDEE_CALLS_HOST"
                           ? null
                           : "HOST_CALLS_ATTENDEE"
-                      )
-                    }
+                      );
+                      if (errors.location) {
+                        setErrors((prev) => {
+                          const copy = { ...prev };
+                          delete copy.location;
+                          return copy;
+                        });
+                      }
+                    }}
                     className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
                       locationType === "HOST_CALLS_ATTENDEE" || locationType === "ATTENDEE_CALLS_HOST"
                         ? "border-brand bg-brand/10 text-brand shadow-2xs ring-1 ring-brand/30"
@@ -707,7 +818,16 @@ export function EventTypeDrawer({
 
                   <button
                     type="button"
-                    onClick={() => setLocationType(locationType === "CUSTOM_LINK" ? null : "CUSTOM_LINK")}
+                    onClick={() => {
+                      setLocationType(locationType === "CUSTOM_LINK" ? null : "CUSTOM_LINK");
+                      if (errors.location) {
+                        setErrors((prev) => {
+                          const copy = { ...prev };
+                          delete copy.location;
+                          return copy;
+                        });
+                      }
+                    }}
                     className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
                       locationType === "CUSTOM_LINK"
                         ? "border-brand bg-brand/10 text-brand shadow-2xs ring-1 ring-brand/30"
@@ -721,6 +841,12 @@ export function EventTypeDrawer({
                     </div>
                   </button>
                 </div>
+
+                {errors.location && (
+                  <p className="text-xs text-rose-500 font-medium pl-1 animate-in fade-in-50">
+                    {errors.location}
+                  </p>
+                )}
 
                 {/* Contextual Location Inputs */}
                 {locationType === "ZOOM" && (
@@ -763,30 +889,36 @@ export function EventTypeDrawer({
                 )}
 
                 {locationType === "IN_PERSON" && (
-                  <div className="space-y-2 pt-1">
+                  <div className="space-y-1.5 pt-1">
                     <Label htmlFor="drawer-address" className="text-xs font-semibold text-text-main">
-                      Physical address / Location details
+                      Physical address / Location details <span className="text-rose-500">*</span>
                     </Label>
                     <Input
                       id="drawer-address"
                       type="text"
                       value={inPersonAddress}
-                      onChange={(e) => setInPersonAddress(e.target.value)}
+                      onChange={(e) => {
+                        setInPersonAddress(e.target.value);
+                        if (errors.inPersonAddress) {
+                          setErrors((prev) => {
+                            const copy = { ...prev };
+                            delete copy.inPersonAddress;
+                            return copy;
+                          });
+                        }
+                      }}
                       placeholder="e.g. 123 Main St, Suite 400"
-                      className="h-9 text-xs rounded-xl border-border-subtle bg-surface text-text-main focus:border-brand"
+                      className={`h-9 text-xs rounded-xl border bg-surface text-text-main transition-colors ${
+                        errors.inPersonAddress
+                          ? "border-rose-400 focus:border-rose-500 ring-1 ring-rose-500/20"
+                          : "border-border-subtle focus:border-brand"
+                      }`}
                     />
-                    <div className="flex items-center gap-2 pt-1">
-                      <input
-                        type="checkbox"
-                        id="drawer-display-address"
-                        checked={displayPublicAddress}
-                        onChange={(e) => setDisplayPublicAddress(e.target.checked)}
-                        className="rounded border-border-subtle text-brand focus:ring-brand"
-                      />
-                      <Label htmlFor="drawer-display-address" className="text-xs text-text-sub cursor-pointer">
-                        Display exact address publicly before booking
-                      </Label>
-                    </div>
+                    {errors.inPersonAddress && (
+                      <p className="text-xs text-rose-500 font-medium pl-0.5 animate-in fade-in-50">
+                        {errors.inPersonAddress}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -817,18 +949,36 @@ export function EventTypeDrawer({
                       </button>
                     </div>
                     {locationType === "ATTENDEE_CALLS_HOST" && (
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <Label htmlFor="drawer-phone" className="text-xs font-semibold text-text-main">
-                          Your phone number
+                          Your phone number <span className="text-rose-500">*</span>
                         </Label>
                         <Input
                           id="drawer-phone"
                           type="tel"
                           value={attendeeCallsHostPhone}
-                          onChange={(e) => setAttendeeCallsHostPhone(e.target.value)}
+                          onChange={(e) => {
+                            setAttendeeCallsHostPhone(e.target.value);
+                            if (errors.attendeeCallsHostPhone) {
+                              setErrors((prev) => {
+                                const copy = { ...prev };
+                                delete copy.attendeeCallsHostPhone;
+                                return copy;
+                              });
+                            }
+                          }}
                           placeholder="+1 (555) 000-0000"
-                          className="h-9 text-xs rounded-xl border-border-subtle bg-surface text-text-main focus:border-brand"
+                          className={`h-9 text-xs rounded-xl border bg-surface text-text-main transition-colors ${
+                            errors.attendeeCallsHostPhone
+                              ? "border-rose-400 focus:border-rose-500 ring-1 ring-rose-500/20"
+                              : "border-border-subtle focus:border-brand"
+                          }`}
                         />
+                        {errors.attendeeCallsHostPhone && (
+                          <p className="text-xs text-rose-500 font-medium pl-0.5 animate-in fade-in-50">
+                            {errors.attendeeCallsHostPhone}
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -837,16 +987,34 @@ export function EventTypeDrawer({
                 {locationType === "CUSTOM_LINK" && (
                   <div className="space-y-1.5 pt-1">
                     <Label htmlFor="drawer-custom-url" className="text-xs font-semibold text-text-main">
-                      Custom meeting URL
+                      Custom meeting URL <span className="text-rose-500">*</span>
                     </Label>
                     <Input
                       id="drawer-custom-url"
                       type="url"
                       value={customLinkUrl}
-                      onChange={(e) => setCustomLinkUrl(e.target.value)}
+                      onChange={(e) => {
+                        setCustomLinkUrl(e.target.value);
+                        if (errors.customLinkUrl) {
+                          setErrors((prev) => {
+                            const copy = { ...prev };
+                            delete copy.customLinkUrl;
+                            return copy;
+                          });
+                        }
+                      }}
                       placeholder="https://custom-room.example.com/meet"
-                      className="h-9 text-xs rounded-xl border-border-subtle bg-surface text-text-main focus:border-brand"
+                      className={`h-9 text-xs rounded-xl border bg-surface text-text-main transition-colors ${
+                        errors.customLinkUrl
+                          ? "border-rose-400 focus:border-rose-500 ring-1 ring-rose-500/20"
+                          : "border-border-subtle focus:border-brand"
+                      }`}
                     />
+                    {errors.customLinkUrl && (
+                      <p className="text-xs text-rose-500 font-medium pl-0.5 animate-in fade-in-50">
+                        {errors.customLinkUrl}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
