@@ -169,86 +169,92 @@ function EventTypeListContent() {
   }, [items, searchQuery]);
 
   return (
-    <div className="flex w-full min-h-[calc(100vh-5rem)] items-stretch overflow-x-hidden p-3.5 sm:p-5 lg:p-6">
-      {/* Main Content Section: subtle light gray surface with rounded corners, shrinks when SidePanel opens */}
-      <div className="flex-1 min-w-0 transition-all duration-300 ease-in-out bg-surface-subtle rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 space-y-6 shadow-xs">
-        {/* Scheduling Header Row */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text-main">Scheduling</h1>
-          </div>
-
-          {/* Right Header Actions: Manage Availability & Create Button */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <Button
-              asChild
-              variant="outline"
-              className="flex-1 sm:flex-initial rounded-full border-border-subtle bg-surface hover:bg-blue-50/70 hover:text-brand px-3.5 sm:px-4 py-2 text-xs font-semibold text-text-main shadow-2xs gap-1.5 transition-all cursor-pointer h-9 justify-center"
-            >
-              <Link href="/dashboard/availability">
-                <Calendar className="h-3.5 w-3.5 text-text-muted shrink-0" />
-                <span>Availability</span>
-              </Link>
-            </Button>
-
-            <Button
-              type="button"
-              onClick={openCreateDrawer}
-              className="flex-1 sm:flex-initial rounded-full bg-brand hover:bg-brand-hover text-white px-3.5 sm:px-4 py-2 text-xs font-semibold shadow-2xs gap-1.5 transition-all cursor-pointer h-9 justify-center"
-            >
-              <Plus className="h-3.5 w-3.5 stroke-[2.5] shrink-0" />
-              <span>Create</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Subtabs Bar */}
-        <div className="border-b border-border-subtle">
-          <div className="flex items-center text-xs font-semibold whitespace-nowrap">
-            <button
-              type="button"
-              className="pb-3 border-b-2 border-brand text-brand font-bold shrink-0 transition-colors"
-            >
-              Event types
-            </button>
-          </div>
-        </div>
-
-        {/* Search Bar Input */}
-        <div className="w-full sm:max-w-md relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted pointer-events-none" />
-          <Input
-            ref={searchInputRef}
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search event types"
-            className="h-10 w-full pl-10 pr-4 rounded-xl border-border-subtle bg-surface text-xs shadow-2xs text-text-main placeholder:text-text-muted focus:border-brand"
-          />
-        </div>
-
-        {/* Host User Identity Strip */}
-        {user && (
-          <div className="flex items-center justify-between py-1">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand/15 text-brand text-[11px] font-bold select-none">
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-              <span className="text-xs font-bold text-text-main truncate">{user.name}</span>
+    <div className="flex w-full h-full min-h-0 items-stretch overflow-hidden p-3.5 sm:p-5 lg:p-6">
+      {/* Main Content Section: fixed height container, shrinks when SidePanel opens */}
+      <div className="flex-1 min-w-0 h-full min-h-0 flex flex-col transition-all duration-300 ease-in-out bg-surface-subtle rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 shadow-xs overflow-hidden">
+        {/* Fixed Top Controls: Header, Tabs, Search, and Host Identity */}
+        <div className="shrink-0 space-y-4 sm:space-y-5 pb-2">
+          {/* Scheduling Header Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text-main">Scheduling</h1>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
-              <Link
-                href={`/public/${user.username}`}
-                target="_blank"
-                className="text-xs font-semibold text-brand hover:underline flex items-center gap-1.5"
+            {/* Right Header Actions: Manage Availability & Create Button */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <Button
+                asChild
+                variant="outline"
+                className="flex-1 sm:flex-initial rounded-full border-border-subtle bg-surface hover:bg-blue-50/70 hover:text-brand px-3.5 sm:px-4 py-2 text-xs font-semibold text-text-main shadow-2xs gap-1.5 transition-all cursor-pointer h-9 justify-center"
               >
-                <span>View Public Profile</span>
-                <ExternalLink className="h-3.5 w-3.5" />
-              </Link>
+                <Link href="/dashboard/availability">
+                  <Calendar className="h-3.5 w-3.5 text-text-muted shrink-0" />
+                  <span>Availability</span>
+                </Link>
+              </Button>
+
+              <Button
+                type="button"
+                onClick={openCreateDrawer}
+                className="flex-1 sm:flex-initial rounded-full bg-brand hover:bg-brand-hover text-white px-3.5 sm:px-4 py-2 text-xs font-semibold shadow-2xs gap-1.5 transition-all cursor-pointer h-9 justify-center"
+              >
+                <Plus className="h-3.5 w-3.5 stroke-[2.5] shrink-0" />
+                <span>Create</span>
+              </Button>
             </div>
           </div>
-        )}
+
+          {/* Subtabs Bar */}
+          <div className="border-b border-border-subtle">
+            <div className="flex items-center text-xs font-semibold whitespace-nowrap">
+              <button
+                type="button"
+                className="pb-3 border-b-2 border-brand text-brand font-bold shrink-0 transition-colors"
+              >
+                Event types
+              </button>
+            </div>
+          </div>
+
+          {/* Search Bar Input */}
+          <div className="w-full sm:max-w-md relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted pointer-events-none" />
+            <Input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search event types"
+              className="h-10 w-full pl-10 pr-4 rounded-xl border-border-subtle bg-surface text-xs shadow-2xs text-text-main placeholder:text-text-muted focus:border-brand"
+            />
+          </div>
+
+          {/* Host User Identity Strip */}
+          {user && (
+            <div className="flex items-center justify-between py-1">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand/15 text-brand text-[11px] font-bold select-none">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-xs font-bold text-text-main truncate">{user.name}</span>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <Link
+                  href={`/public/${user.username}`}
+                  target="_blank"
+                  className="text-xs font-semibold text-brand hover:underline flex items-center gap-1.5"
+                >
+                  <span>View Public Profile</span>
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Dedicated Scroll Container for Event Cards */}
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-3.5 pr-1.5 pt-2">
 
         {/* Loading Skeletons */}
         {isLoading && (
@@ -455,6 +461,7 @@ function EventTypeListContent() {
             </p>
           </div>
         )}
+        </div>
       </div>
 
       {/* Right Integrated Side Panel for Adding/Editing Event Types */}

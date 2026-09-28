@@ -204,7 +204,7 @@ export function AvailabilityEditor() {
 
   if (isLoading) {
     return (
-      <div className="px-4 sm:px-6 md:px-10 lg:px-14 py-4 sm:py-6 md:py-8 w-full space-y-6 pb-16">
+      <div className="h-full min-h-0 overflow-y-auto px-4 sm:px-6 md:px-10 lg:px-14 py-4 sm:py-6 md:py-8 w-full space-y-6 pb-16">
         <Skeleton className="h-8 w-48 rounded-md" />
         <Skeleton className="h-40 rounded-xl border border-[var(--border-subtle)]" />
         <Skeleton className="h-96 rounded-xl border border-[var(--border-subtle)]" />
@@ -213,7 +213,7 @@ export function AvailabilityEditor() {
   }
 
   return (
-    <div className="px-4 sm:px-6 md:px-10 lg:px-14 py-4 sm:py-6 md:py-8 w-full space-y-8 pb-24">
+    <div className="h-full min-h-0 overflow-y-auto px-4 sm:px-6 md:px-10 lg:px-14 py-4 sm:py-6 md:py-8 w-full space-y-8 pb-24">
       {/* Header Title Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
         <div>

@@ -322,62 +322,66 @@ export default function BookingsPage() {
   }, [bookings, currentUser?.timezone]);
 
   return (
-    <div className="flex w-full min-h-[calc(100vh-5rem)] items-stretch overflow-x-hidden p-3.5 sm:p-5 lg:p-6">
+    <div className="flex w-full h-full min-h-0 items-stretch overflow-hidden p-3.5 sm:p-5 lg:p-6">
       {/* Main Content: subtle rounded surface, horizontally shrinks when BookingDetailDrawer opens */}
-      <div className="flex-1 min-w-0 transition-all duration-300 ease-in-out bg-surface-subtle rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 space-y-6 shadow-xs">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)]">
-              Meetings
-            </h1>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              Track upcoming sessions, review meeting histories, reschedule conflicts, and manage cancellations.
-            </p>
+      <div className="flex-1 min-w-0 h-full min-h-0 flex flex-col transition-all duration-300 ease-in-out bg-surface-subtle rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 shadow-xs overflow-hidden">
+        {/* Fixed Header & Tabs Section */}
+        <div className="shrink-0 space-y-4 pb-2">
+          {/* Page Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+                Meetings
+              </h1>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                Track upcoming sessions, review meeting histories, reschedule conflicts, and manage cancellations.
+              </p>
+            </div>
+          </div>
+
+          {/* Filter Tabs without bottom divider */}
+          <div className="flex items-center gap-6 pb-2 text-xs">
+            <button
+              type="button"
+              onClick={() => handleTabChange("upcoming")}
+              className={`pb-2 border-b-2 transition-colors cursor-pointer ${
+                tab === "upcoming"
+                  ? "border-blue-600 text-blue-600 font-bold"
+                  : "border-transparent text-neutral-600 hover:text-neutral-900 font-medium"
+              }`}
+            >
+              <span>Upcoming</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange("past")}
+              className={`pb-2 border-b-2 transition-colors cursor-pointer ${
+                tab === "past"
+                  ? "border-blue-600 text-blue-600 font-bold"
+                  : "border-transparent text-neutral-600 hover:text-neutral-900 font-medium"
+              }`}
+            >
+              <span>Past</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange("cancelled")}
+              className={`pb-2 border-b-2 transition-colors cursor-pointer ${
+                tab === "cancelled"
+                  ? "border-blue-600 text-blue-600 font-bold"
+                  : "border-transparent text-neutral-600 hover:text-neutral-900 font-medium"
+              }`}
+            >
+              <span>Cancelled</span>
+            </button>
           </div>
         </div>
 
-        {/* Filter Tabs without bottom divider */}
-        <div className="flex items-center gap-6 pb-2 text-xs">
-          <button
-            type="button"
-            onClick={() => handleTabChange("upcoming")}
-            className={`pb-2 border-b-2 transition-colors cursor-pointer ${
-              tab === "upcoming"
-                ? "border-blue-600 text-blue-600 font-bold"
-                : "border-transparent text-neutral-600 hover:text-neutral-900 font-medium"
-            }`}
-          >
-            <span>Upcoming</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange("past")}
-            className={`pb-2 border-b-2 transition-colors cursor-pointer ${
-              tab === "past"
-                ? "border-blue-600 text-blue-600 font-bold"
-                : "border-transparent text-neutral-600 hover:text-neutral-900 font-medium"
-            }`}
-          >
-            <span>Past</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange("cancelled")}
-            className={`pb-2 border-b-2 transition-colors cursor-pointer ${
-              tab === "cancelled"
-                ? "border-blue-600 text-blue-600 font-bold"
-                : "border-transparent text-neutral-600 hover:text-neutral-900 font-medium"
-            }`}
-          >
-            <span>Cancelled</span>
-          </button>
-        </div>
-
-        {/* Content List */}
-            {isLoading ? (
+        {/* Dedicated Scroll Container for Content List */}
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1.5 pt-1">
+          {isLoading ? (
               <div className="space-y-3">
                 <Skeleton className="h-20 w-full rounded-2xl" />
                 <Skeleton className="h-20 w-full rounded-2xl" />
@@ -514,6 +518,7 @@ export default function BookingsPage() {
               </div>
             )}
           </div>
+        </div>
 
           {/* Slide-in Sidebar Drawer with Meeting Info (Matching Screenshot) */}
           <BookingDetailDrawer
