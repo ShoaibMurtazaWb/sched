@@ -30,7 +30,6 @@ function EventTypeListContent() {
   const searchParams = useSearchParams();
   const [items, setItems] = useState<EventType[]>([]);
   const [user, setUser] = useState<CurrentUser | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -87,7 +86,6 @@ function EventTypeListContent() {
 
   async function loadData() {
     setIsLoading(true);
-    setError(null);
     try {
       const [me, activeList] = await Promise.all([
         api<CurrentUser>("/auth/me"),
@@ -96,7 +94,7 @@ function EventTypeListContent() {
       setUser(me);
       setItems(activeList);
     } catch {
-      setError("Could not load event types.");
+      toast.error("Could not load event types", "Please try refreshing the page.");
     } finally {
       setIsLoading(false);
     }
@@ -171,9 +169,9 @@ function EventTypeListContent() {
   }, [items, searchQuery]);
 
   return (
-    <div className="flex w-full min-h-[calc(100vh-5rem)] items-stretch overflow-x-hidden">
-      {/* Main Content Section: smoothly shrinks horizontally when SidePanel opens */}
-      <div className="flex-1 min-w-0 transition-all duration-300 ease-in-out px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-5">
+    <div className="flex w-full min-h-[calc(100vh-5rem)] items-stretch overflow-x-hidden p-3.5 sm:p-5 lg:p-6">
+      {/* Main Content Section: subtle light gray surface with rounded corners, shrinks when SidePanel opens */}
+      <div className="flex-1 min-w-0 transition-all duration-300 ease-in-out bg-surface-subtle rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 space-y-6 shadow-xs">
         {/* Scheduling Header Row */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-2">
@@ -185,7 +183,7 @@ function EventTypeListContent() {
             <Button
               asChild
               variant="outline"
-              className="flex-1 sm:flex-initial rounded-full border-border-subtle bg-surface hover:bg-surface-subtle px-3.5 sm:px-4 py-2 text-xs font-semibold text-text-main shadow-2xs gap-1.5 transition-all cursor-pointer h-9 justify-center"
+              className="flex-1 sm:flex-initial rounded-full border-border-subtle bg-surface hover:bg-blue-50/70 hover:text-brand px-3.5 sm:px-4 py-2 text-xs font-semibold text-text-main shadow-2xs gap-1.5 transition-all cursor-pointer h-9 justify-center"
             >
               <Link href="/dashboard/availability">
                 <Calendar className="h-3.5 w-3.5 text-text-muted shrink-0" />
@@ -243,30 +241,24 @@ function EventTypeListContent() {
               <Link
                 href={`/public/${user.username}`}
                 target="_blank"
-                className="text-xs font-semibold text-brand hover:underline flex items-center gap-1"
+                className="text-xs font-semibold text-brand hover:underline flex items-center gap-1.5"
               >
-                <span>View landing page</span>
-                <ExternalLink className="h-3 w-3" />
+                <span>View Public Profile</span>
+                <ExternalLink className="h-3.5 w-3.5" />
               </Link>
             </div>
-          </div>
-        )}
-
-        {error && (
-          <div className="rounded-xl bg-red-50 border border-red-200 p-3.5 text-xs text-red-700 font-medium">
-            {error}
           </div>
         )}
 
         {/* Loading Skeletons */}
         {isLoading && (
           <div className="space-y-4 pt-2">
-            <Skeleton className="h-28 w-full rounded-xl border border-neutral-200" />
-            <Skeleton className="h-28 w-full rounded-xl border border-neutral-200" />
+            <Skeleton className="h-28 w-full rounded-2xl" />
+            <Skeleton className="h-28 w-full rounded-2xl" />
           </div>
         )}
 
-        {/* Full-Width Event Cards List */}
+        {/* Full-Width Event Cards List with Light Blue Hover & Unchanged Left Accent Border */}
         {!isLoading && filteredItems.length > 0 && (
           <div className="space-y-3.5">
             {filteredItems.map((item) => {
@@ -278,10 +270,10 @@ function EventTypeListContent() {
                 <Card
                   key={item.id}
                   onClick={() => openEditDrawer(item.id)}
-                  className={`group relative flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 rounded-2xl border p-4 sm:p-5 shadow-2xs hover:shadow-xs transition-all duration-200 border-l-[6px] w-full cursor-pointer ${
+                  className={`group relative flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 rounded-2xl border p-4 sm:p-5 shadow-xs hover:shadow-md transition-all duration-200 border-l-[5px] w-full cursor-pointer ${
                     isCurrentlyEditing
-                      ? "border-brand bg-brand/5 ring-1 ring-brand/30 border-l-brand shadow-2xs"
-                      : "border-border-subtle bg-surface border-l-brand hover:border-border-strong hover:bg-surface-subtle/50"
+                      ? "border-brand/40 bg-blue-50/70 dark:bg-blue-950/40 ring-2 ring-brand/20 border-l-brand shadow-xs"
+                      : "border-border-subtle bg-surface border-l-brand hover:bg-blue-50/60 dark:hover:bg-blue-950/20"
                   }`}
                 >
                   {/* Card Header & Meta Info */}

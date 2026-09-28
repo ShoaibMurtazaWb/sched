@@ -495,29 +495,33 @@ export function EventTypeDrawer({
           <p>Loading event details…</p>
         </div>
       ) : (
-        <div className="space-y-4 divide-y divide-border-subtle">
+        <div className="space-y-2 py-1">
           {/* 1. Duration Section */}
-          <div className="pt-3 first:pt-0">
+          <div className="rounded-xl overflow-hidden transition-colors">
             <button
               type="button"
               onClick={() => toggleSection("duration")}
-              className="flex w-full items-center justify-between py-1.5 text-sm font-bold text-text-main hover:text-brand transition-colors cursor-pointer group"
+              className={`flex w-full items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer group ${
+                openSections.duration
+                  ? "bg-blue-50/50 text-brand"
+                  : "text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+              }`}
             >
               <div className="flex items-center gap-2">
-                <span>Duration</span>
-                <span className="text-xs font-normal text-text-muted">
+                <span className="font-semibold group-hover:text-brand transition-colors">Duration</span>
+                <span className="text-xs font-normal text-text-muted group-hover:text-brand/80 transition-colors">
                   ({duration} min)
                 </span>
               </div>
               <ChevronDown
-                className={`h-4 w-4 text-text-muted group-hover:text-brand transition-transform duration-200 ${
-                  openSections.duration ? "rotate-180" : ""
+                className={`h-4 w-4 shrink-0 text-text-muted group-hover:text-brand transition-transform duration-200 ${
+                  openSections.duration ? "rotate-180 text-brand" : ""
                 }`}
               />
             </button>
 
             {openSections.duration && (
-              <div className="mt-3 space-y-3 pb-2 animate-in fade-in-50 duration-150">
+              <div className="px-3.5 pt-2 pb-4 space-y-3 animate-in fade-in-50 duration-150">
                 <div className="flex flex-wrap gap-2">
                   {DURATION_PRESETS.map((mins) => (
                     <button
@@ -562,27 +566,31 @@ export function EventTypeDrawer({
           </div>
 
           {/* 2. Location Section */}
-          <div className="pt-3">
+          <div className="rounded-xl overflow-hidden transition-colors">
             <button
               type="button"
               onClick={() => toggleSection("location")}
-              className="flex w-full items-center justify-between py-1.5 text-sm font-bold text-text-main hover:text-brand transition-colors cursor-pointer group"
+              className={`flex w-full items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer group ${
+                openSections.location
+                  ? "bg-blue-50/50 text-brand"
+                  : "text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+              }`}
             >
               <div className="flex items-center gap-2">
-                <span>Location</span>
-                <span className="text-xs font-normal text-text-muted">
+                <span className="font-semibold group-hover:text-brand transition-colors">Location</span>
+                <span className="text-xs font-normal text-text-muted group-hover:text-brand/80 transition-colors">
                   ({locationSummary})
                 </span>
               </div>
               <ChevronDown
-                className={`h-4 w-4 text-text-muted group-hover:text-brand transition-transform duration-200 ${
-                  openSections.location ? "rotate-180" : ""
+                className={`h-4 w-4 shrink-0 text-text-muted group-hover:text-brand transition-transform duration-200 ${
+                  openSections.location ? "rotate-180 text-brand" : ""
                 }`}
               />
             </button>
 
             {openSections.location && (
-              <div className="mt-3 space-y-3 pb-2 animate-in fade-in-50 duration-150">
+              <div className="px-3.5 pt-2 pb-4 space-y-3 animate-in fade-in-50 duration-150">
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -792,22 +800,26 @@ export function EventTypeDrawer({
           </div>
 
           {/* 3. Description Section */}
-          <div className="pt-3">
+          <div className="rounded-xl overflow-hidden transition-colors">
             <button
               type="button"
               onClick={() => toggleSection("description")}
-              className="flex w-full items-center justify-between py-1.5 text-sm font-bold text-text-main hover:text-brand transition-colors cursor-pointer group"
+              className={`flex w-full items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer group ${
+                openSections.description
+                  ? "bg-blue-50/50 text-brand"
+                  : "text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+              }`}
             >
-              <span>Description</span>
+              <span className="font-semibold group-hover:text-brand transition-colors">Description</span>
               <ChevronDown
-                className={`h-4 w-4 text-text-muted group-hover:text-brand transition-transform duration-200 ${
-                  openSections.description ? "rotate-180" : ""
+                className={`h-4 w-4 shrink-0 text-text-muted group-hover:text-brand transition-transform duration-200 ${
+                  openSections.description ? "rotate-180 text-brand" : ""
                 }`}
               />
             </button>
 
             {openSections.description && (
-              <div className="mt-3 space-y-3 pb-2 animate-in fade-in-50 duration-150">
+              <div className="px-3.5 pt-2 pb-4 space-y-3 animate-in fade-in-50 duration-150">
                 <div className="space-y-1.5">
                   <Label htmlFor="drawer-desc" className="text-xs font-semibold text-text-main">
                     Description / Instructions
@@ -826,27 +838,31 @@ export function EventTypeDrawer({
           </div>
 
           {/* 4. Availability Section */}
-          <div className="pt-3">
+          <div className="rounded-xl overflow-hidden transition-colors">
             <button
               type="button"
               onClick={() => toggleSection("availability")}
-              className="flex w-full items-center justify-between py-1.5 text-sm font-bold text-text-main hover:text-brand transition-colors cursor-pointer group"
+              className={`flex w-full items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer group ${
+                openSections.availability
+                  ? "bg-blue-50/50 text-brand"
+                  : "text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+              }`}
             >
               <div className="flex items-center gap-2">
-                <span>Availability</span>
-                <span className="text-xs font-normal text-text-muted">
+                <span className="font-semibold group-hover:text-brand transition-colors">Availability</span>
+                <span className="text-xs font-normal text-text-muted group-hover:text-brand/80 transition-colors">
                   ({schedule?.name || "Weekdays, hours vary"})
                 </span>
               </div>
               <ChevronDown
-                className={`h-4 w-4 text-text-muted group-hover:text-brand transition-transform duration-200 ${
-                  openSections.availability ? "rotate-180" : ""
+                className={`h-4 w-4 shrink-0 text-text-muted group-hover:text-brand transition-transform duration-200 ${
+                  openSections.availability ? "rotate-180 text-brand" : ""
                 }`}
               />
             </button>
 
             {openSections.availability && (
-              <div className="mt-3 space-y-3 pb-2 text-xs animate-in fade-in-50 duration-150">
+              <div className="px-3.5 pt-2 pb-4 space-y-3 text-xs animate-in fade-in-50 duration-150">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-text-main font-semibold">
                     <Calendar className="h-3.5 w-3.5 text-text-muted" />
@@ -915,27 +931,31 @@ export function EventTypeDrawer({
           </div>
 
           {/* 5. Host Section */}
-          <div className="pt-3">
+          <div className="rounded-xl overflow-hidden transition-colors">
             <button
               type="button"
               onClick={() => toggleSection("host")}
-              className="flex w-full items-center justify-between py-1.5 text-sm font-bold text-text-main hover:text-brand transition-colors cursor-pointer group"
+              className={`flex w-full items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer group ${
+                openSections.host
+                  ? "bg-blue-50/50 text-brand"
+                  : "text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+              }`}
             >
               <div className="flex items-center gap-2">
-                <span>Host</span>
-                <span className="text-xs font-normal text-text-muted">
+                <span className="font-semibold group-hover:text-brand transition-colors">Host</span>
+                <span className="text-xs font-normal text-text-muted group-hover:text-brand/80 transition-colors">
                   ({user?.name || "Host"})
                 </span>
               </div>
               <ChevronDown
-                className={`h-4 w-4 text-text-muted group-hover:text-brand transition-transform duration-200 ${
-                  openSections.host ? "rotate-180" : ""
+                className={`h-4 w-4 shrink-0 text-text-muted group-hover:text-brand transition-transform duration-200 ${
+                  openSections.host ? "rotate-180 text-brand" : ""
                 }`}
               />
             </button>
 
             {openSections.host && (
-              <div className="mt-3 space-y-3 pb-2 animate-in fade-in-50 duration-150">
+              <div className="px-3.5 pt-2 pb-4 space-y-3 animate-in fade-in-50 duration-150">
                 <div className="flex items-center gap-3 p-3.5 rounded-xl border border-border-subtle bg-surface-subtle/50">
                   {user?.avatarUrl ? (
                     <img
@@ -966,27 +986,31 @@ export function EventTypeDrawer({
           </div>
 
           {/* 6. Booking Questions (Optional) */}
-          <div className="pt-3">
+          <div className="rounded-xl overflow-hidden transition-colors">
             <button
               type="button"
               onClick={() => toggleSection("questions")}
-              className="flex w-full items-center justify-between py-1.5 text-sm font-bold text-text-main hover:text-brand transition-colors cursor-pointer group"
+              className={`flex w-full items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer group ${
+                openSections.questions
+                  ? "bg-blue-50/50 text-brand"
+                  : "text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+              }`}
             >
               <div className="flex items-center gap-2">
-                <span>Booking questions</span>
-                <span className="text-xs font-normal text-text-muted">
+                <span className="font-semibold group-hover:text-brand transition-colors">Booking questions</span>
+                <span className="text-xs font-normal text-text-muted group-hover:text-brand/80 transition-colors">
                   ({customQuestions.length})
                 </span>
               </div>
               <ChevronDown
-                className={`h-4 w-4 text-text-muted group-hover:text-brand transition-transform duration-200 ${
-                  openSections.questions ? "rotate-180" : ""
+                className={`h-4 w-4 shrink-0 text-text-muted group-hover:text-brand transition-transform duration-200 ${
+                  openSections.questions ? "rotate-180 text-brand" : ""
                 }`}
               />
             </button>
 
             {openSections.questions && (
-              <div className="mt-3 space-y-3 pb-2 animate-in fade-in-50 duration-150">
+              <div className="px-3.5 pt-2 pb-4 space-y-3 animate-in fade-in-50 duration-150">
                 <p className="text-xs text-text-sub">
                   Ask invitees additional questions when they book a meeting.
                 </p>
