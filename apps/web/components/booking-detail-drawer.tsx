@@ -22,8 +22,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
+import { SidePanel } from "@/components/ui/side-panel";
 import { api } from "@/lib/api";
-import { useScrollLock } from "@/lib/use-scroll-lock";
 import type { BookingResponse } from "@sched/api-contract";
 
 interface BookingDetailDrawerProps {
@@ -48,9 +48,6 @@ export function BookingDetailDrawer({
   const [editEmail, setEditEmail] = useState("");
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [displayedBooking, setDisplayedBooking] = useState<BookingResponse | null>(booking);
-
-  // Lock background body scroll when drawer overlay is open
-  useScrollLock(isOpen);
 
   useEffect(() => {
     if (booking) {
@@ -193,23 +190,12 @@ export function BookingDetailDrawer({
 
   return (
     <>
-      {/* Backdrop overlay on Desktop and Mobile */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-40 backdrop-blur-xs transition-opacity duration-300"
-          onClick={onClose}
-        />
-      )}
-
-      {/* Slide-in Drawer with isolated contained scrolling */}
-      <div
-        className={`fixed inset-y-0 right-0 z-50 transition-transform duration-300 ease-in-out w-full sm:w-[500px] md:w-[540px] max-w-full ${
-          isOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
-        }`}
-      >
-        <aside className="w-full h-full border-l border-neutral-200 bg-white shadow-2xl flex flex-col">
-        {/* Drawer Header matching screenshot */}
-        <div className="px-5 sm:px-6 pt-5 pb-3 border-b border-neutral-200 sticky top-0 bg-white z-10 shrink-0 space-y-3.5">
+      <SidePanel
+        isOpen={isOpen}
+        onClose={onClose}
+        ariaLabel={currentBooking.eventType.title}
+        customHeader={
+          <div className="px-5 sm:px-6 pt-5 pb-3 space-y-3.5">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-0.5 min-w-0">
               <h2 className="text-base font-bold tracking-tight text-neutral-900 truncate">
@@ -340,9 +326,8 @@ export function BookingDetailDrawer({
             </button>
           </div>
         </div>
-
-        {/* Drawer Scrollable Body Content */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-5 space-y-6">
+      }
+    >
           {activeTab === "details" ? (
             <div className="space-y-5">
               {/* 1. Invitees Section matching screenshot */}
@@ -632,9 +617,7 @@ export function BookingDetailDrawer({
               )}
             </div>
           )}
-        </div>
-      </aside>
-    </div>
+      </SidePanel>
 
       {/* Edit Invitee Email Modal matching user screenshot */}
       {isEditEmailOpen && (
