@@ -95,7 +95,7 @@ export function EventTypeDrawer({
   const [description, setDescription] = useState("");
 
   // Location Fields
-  const [locationType, setLocationType] = useState<LocationType>("ZOOM");
+  const [locationType, setLocationType] = useState<LocationType | null>(null);
   const [inPersonAddress, setInPersonAddress] = useState("");
   const [displayPublicAddress, setDisplayPublicAddress] = useState(false);
   const [inPersonNotes, setInPersonNotes] = useState("");
@@ -163,7 +163,7 @@ export function EventTypeDrawer({
       setDuration(30);
       setCustomDuration("");
       setDescription("");
-      setLocationType("ZOOM");
+      setLocationType(null);
       setInPersonAddress("");
       setDisplayPublicAddress(false);
       setInPersonNotes("");
@@ -220,6 +220,8 @@ export function EventTypeDrawer({
             setAttendeeCallsHostPhone(String(locData.hostPhoneNumber || ""));
             setAttendeeCallsHostNotes(String(locData.extraNotes || ""));
           }
+        } else {
+          setLocationType(null);
         }
       })
       .catch(() => {
@@ -323,6 +325,13 @@ export function EventTypeDrawer({
     setIsSaving(true);
     setError(null);
     setErrors({});
+
+    if (!locationType) {
+      setError("Please select a location for this event type.");
+      setOpenSections((prev) => ({ ...prev, location: true }));
+      setIsSaving(false);
+      return;
+    }
 
     if (locationType === "ZOOM" && isZoomConnected === false) {
       setError("Please connect your Zoom account first or choose another location.");
@@ -440,7 +449,9 @@ export function EventTypeDrawer({
   );
 
   const locationSummary =
-    locationType === "ZOOM"
+    !locationType
+      ? "No location set"
+      : locationType === "ZOOM"
       ? "Zoom"
       : locationType === "STATIC_VIDEO"
       ? "Video link"
@@ -497,14 +508,20 @@ export function EventTypeDrawer({
       ) : (
         <div className="space-y-2 py-1">
           {/* 1. Duration Section */}
-          <div className="rounded-xl overflow-hidden transition-colors">
+          <div
+            className={`rounded-2xl transition-all duration-200 ${
+              openSections.duration
+                ? "bg-blue-50/50 dark:bg-blue-950/25 overflow-hidden"
+                : "rounded-xl overflow-hidden"
+            }`}
+          >
             <button
               type="button"
               onClick={() => toggleSection("duration")}
-              className={`flex w-full items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer group ${
+              className={`flex w-full items-center justify-between px-3.5 text-sm font-semibold transition-all cursor-pointer group ${
                 openSections.duration
-                  ? "bg-blue-50/50 text-brand"
-                  : "text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+                  ? "pt-3 pb-2 text-brand"
+                  : "py-2.5 rounded-xl text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
               }`}
             >
               <div className="flex items-center gap-2">
@@ -521,7 +538,7 @@ export function EventTypeDrawer({
             </button>
 
             {openSections.duration && (
-              <div className="px-3.5 pt-2 pb-4 space-y-3 animate-in fade-in-50 duration-150">
+              <div className="px-3.5 pt-1 pb-3.5 space-y-3 animate-in fade-in-50 duration-150">
                 <div className="flex flex-wrap gap-2">
                   {DURATION_PRESETS.map((mins) => (
                     <button
@@ -566,35 +583,66 @@ export function EventTypeDrawer({
           </div>
 
           {/* 2. Location Section */}
-          <div className="rounded-xl overflow-hidden transition-colors">
+          <div
+            className={`rounded-2xl transition-all duration-200 ${
+              openSections.location
+                ? "bg-blue-50/50 dark:bg-blue-950/25 overflow-hidden"
+                : "rounded-xl overflow-hidden"
+            }`}
+          >
             <button
               type="button"
               onClick={() => toggleSection("location")}
-              className={`flex w-full items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer group ${
+              className={`flex w-full ${!locationType ? "items-start" : "items-center"} justify-between px-3.5 text-sm font-semibold transition-all cursor-pointer group ${
                 openSections.location
-                  ? "bg-blue-50/50 text-brand"
-                  : "text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+                  ? "pt-3 pb-2 text-brand"
+                  : "py-2.5 rounded-xl text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
               }`}
             >
-              <div className="flex items-center gap-2">
-                <span className="font-semibold group-hover:text-brand transition-colors">Location</span>
-                <span className="text-xs font-normal text-text-muted group-hover:text-brand/80 transition-colors">
-                  ({locationSummary})
-                </span>
-              </div>
+              {!locationType ? (
+                <div className="flex flex-col items-start gap-1 text-left">
+                  <span className="font-semibold text-text-main group-hover:text-brand transition-colors">
+                    Location
+                  </span>
+                  <div className="flex items-center gap-1.5 text-xs text-text-sub font-normal">
+                    <svg
+                      className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500 shrink-0"
+                      viewBox="0 0 16 16"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0-9.5a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 5.5zm0 6a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span className="text-text-sub group-hover:text-brand/80 transition-colors">
+                      No location set
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-text-main group-hover:text-brand transition-colors">Location</span>
+                  <span className="text-xs font-normal text-text-muted group-hover:text-brand/80 transition-colors">
+                    ({locationSummary})
+                  </span>
+                </div>
+              )}
               <ChevronDown
                 className={`h-4 w-4 shrink-0 text-text-muted group-hover:text-brand transition-transform duration-200 ${
-                  openSections.location ? "rotate-180 text-brand" : ""
-                }`}
+                  !locationType ? "mt-1" : ""
+                } ${openSections.location ? "rotate-180 text-brand" : ""}`}
               />
             </button>
 
             {openSections.location && (
-              <div className="px-3.5 pt-2 pb-4 space-y-3 animate-in fade-in-50 duration-150">
+              <div className="px-3.5 pt-1 pb-3.5 space-y-3 animate-in fade-in-50 duration-150">
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setLocationType("ZOOM")}
+                    onClick={() => setLocationType(locationType === "ZOOM" ? null : "ZOOM")}
                     className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
                       locationType === "ZOOM"
                         ? isZoomConnected === false
@@ -621,7 +669,7 @@ export function EventTypeDrawer({
 
                   <button
                     type="button"
-                    onClick={() => setLocationType("IN_PERSON")}
+                    onClick={() => setLocationType(locationType === "IN_PERSON" ? null : "IN_PERSON")}
                     className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
                       locationType === "IN_PERSON"
                         ? "border-brand bg-brand/10 text-brand shadow-2xs ring-1 ring-brand/30"
@@ -637,7 +685,13 @@ export function EventTypeDrawer({
 
                   <button
                     type="button"
-                    onClick={() => setLocationType("HOST_CALLS_ATTENDEE")}
+                    onClick={() =>
+                      setLocationType(
+                        locationType === "HOST_CALLS_ATTENDEE" || locationType === "ATTENDEE_CALLS_HOST"
+                          ? null
+                          : "HOST_CALLS_ATTENDEE"
+                      )
+                    }
                     className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
                       locationType === "HOST_CALLS_ATTENDEE" || locationType === "ATTENDEE_CALLS_HOST"
                         ? "border-brand bg-brand/10 text-brand shadow-2xs ring-1 ring-brand/30"
@@ -653,7 +707,7 @@ export function EventTypeDrawer({
 
                   <button
                     type="button"
-                    onClick={() => setLocationType("CUSTOM_LINK")}
+                    onClick={() => setLocationType(locationType === "CUSTOM_LINK" ? null : "CUSTOM_LINK")}
                     className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
                       locationType === "CUSTOM_LINK"
                         ? "border-brand bg-brand/10 text-brand shadow-2xs ring-1 ring-brand/30"
@@ -800,14 +854,20 @@ export function EventTypeDrawer({
           </div>
 
           {/* 3. Description Section */}
-          <div className="rounded-xl overflow-hidden transition-colors">
+          <div
+            className={`rounded-2xl transition-all duration-200 ${
+              openSections.description
+                ? "bg-blue-50/50 dark:bg-blue-950/25 overflow-hidden"
+                : "rounded-xl overflow-hidden"
+            }`}
+          >
             <button
               type="button"
               onClick={() => toggleSection("description")}
-              className={`flex w-full items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer group ${
+              className={`flex w-full items-center justify-between px-3.5 text-sm font-semibold transition-all cursor-pointer group ${
                 openSections.description
-                  ? "bg-blue-50/50 text-brand"
-                  : "text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+                  ? "pt-3 pb-2 text-brand"
+                  : "py-2.5 rounded-xl text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
               }`}
             >
               <span className="font-semibold group-hover:text-brand transition-colors">Description</span>
@@ -819,7 +879,7 @@ export function EventTypeDrawer({
             </button>
 
             {openSections.description && (
-              <div className="px-3.5 pt-2 pb-4 space-y-3 animate-in fade-in-50 duration-150">
+              <div className="px-3.5 pt-1 pb-3.5 space-y-3 animate-in fade-in-50 duration-150">
                 <div className="space-y-1.5">
                   <Label htmlFor="drawer-desc" className="text-xs font-semibold text-text-main">
                     Description / Instructions
@@ -838,14 +898,20 @@ export function EventTypeDrawer({
           </div>
 
           {/* 4. Availability Section */}
-          <div className="rounded-xl overflow-hidden transition-colors">
+          <div
+            className={`rounded-2xl transition-all duration-200 ${
+              openSections.availability
+                ? "bg-blue-50/50 dark:bg-blue-950/25 overflow-hidden"
+                : "rounded-xl overflow-hidden"
+            }`}
+          >
             <button
               type="button"
               onClick={() => toggleSection("availability")}
-              className={`flex w-full items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer group ${
+              className={`flex w-full items-center justify-between px-3.5 text-sm font-semibold transition-all cursor-pointer group ${
                 openSections.availability
-                  ? "bg-blue-50/50 text-brand"
-                  : "text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+                  ? "pt-3 pb-2 text-brand"
+                  : "py-2.5 rounded-xl text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
               }`}
             >
               <div className="flex items-center gap-2">
@@ -862,7 +928,7 @@ export function EventTypeDrawer({
             </button>
 
             {openSections.availability && (
-              <div className="px-3.5 pt-2 pb-4 space-y-3 text-xs animate-in fade-in-50 duration-150">
+              <div className="px-3.5 pt-1 pb-3.5 space-y-3 text-xs animate-in fade-in-50 duration-150">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-text-main font-semibold">
                     <Calendar className="h-3.5 w-3.5 text-text-muted" />
@@ -878,7 +944,7 @@ export function EventTypeDrawer({
                 </div>
 
                 {/* Timetable Display matching screenshot */}
-                <div className="rounded-2xl border border-border-subtle bg-surface-subtle/50 p-4 space-y-3.5">
+                <div className="rounded-2xl border border-border-subtle bg-surface p-4 space-y-3.5">
                   <div className="space-y-3">
                     {WEEK_DAYS.map((dayItem) => {
                       const intervals =
@@ -897,7 +963,7 @@ export function EventTypeDrawer({
                             {isAvailable ? (
                               <div className="space-y-1 pt-0.5">
                                 {intervals.map((iv, idx) => (
-                                  <div
+                                 <div
                                     key={idx}
                                     className="text-xs sm:text-sm font-medium text-text-main tracking-tight font-sans"
                                   >
@@ -931,14 +997,20 @@ export function EventTypeDrawer({
           </div>
 
           {/* 5. Host Section */}
-          <div className="rounded-xl overflow-hidden transition-colors">
+          <div
+            className={`rounded-2xl transition-all duration-200 ${
+              openSections.host
+                ? "bg-blue-50/50 dark:bg-blue-950/25 overflow-hidden"
+                : "rounded-xl overflow-hidden"
+            }`}
+          >
             <button
               type="button"
               onClick={() => toggleSection("host")}
-              className={`flex w-full items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer group ${
+              className={`flex w-full items-center justify-between px-3.5 text-sm font-semibold transition-all cursor-pointer group ${
                 openSections.host
-                  ? "bg-blue-50/50 text-brand"
-                  : "text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+                  ? "pt-3 pb-2 text-brand"
+                  : "py-2.5 rounded-xl text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
               }`}
             >
               <div className="flex items-center gap-2">
@@ -955,8 +1027,8 @@ export function EventTypeDrawer({
             </button>
 
             {openSections.host && (
-              <div className="px-3.5 pt-2 pb-4 space-y-3 animate-in fade-in-50 duration-150">
-                <div className="flex items-center gap-3 p-3.5 rounded-xl border border-border-subtle bg-surface-subtle/50">
+              <div className="px-3.5 pt-1 pb-3.5 space-y-3 animate-in fade-in-50 duration-150">
+                <div className="flex items-center gap-3 p-3.5 rounded-xl border border-border-subtle bg-surface">
                   {user?.avatarUrl ? (
                     <img
                       src={user.avatarUrl}
@@ -986,14 +1058,20 @@ export function EventTypeDrawer({
           </div>
 
           {/* 6. Booking Questions (Optional) */}
-          <div className="rounded-xl overflow-hidden transition-colors">
+          <div
+            className={`rounded-2xl transition-all duration-200 ${
+              openSections.questions
+                ? "bg-blue-50/50 dark:bg-blue-950/25 overflow-hidden"
+                : "rounded-xl overflow-hidden"
+            }`}
+          >
             <button
               type="button"
               onClick={() => toggleSection("questions")}
-              className={`flex w-full items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer group ${
+              className={`flex w-full items-center justify-between px-3.5 text-sm font-semibold transition-all cursor-pointer group ${
                 openSections.questions
-                  ? "bg-blue-50/50 text-brand"
-                  : "text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+                  ? "pt-3 pb-2 text-brand"
+                  : "py-2.5 rounded-xl text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
               }`}
             >
               <div className="flex items-center gap-2">
@@ -1010,7 +1088,7 @@ export function EventTypeDrawer({
             </button>
 
             {openSections.questions && (
-              <div className="px-3.5 pt-2 pb-4 space-y-3 animate-in fade-in-50 duration-150">
+              <div className="px-3.5 pt-1 pb-3.5 space-y-3 animate-in fade-in-50 duration-150">
                 <p className="text-xs text-text-sub">
                   Ask invitees additional questions when they book a meeting.
                 </p>
