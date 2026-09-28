@@ -6,7 +6,6 @@ import {
   Bell,
   Clock,
   Shield,
-  Check,
   AlertCircle,
   Camera,
   Upload,
@@ -15,11 +14,17 @@ import {
   EyeOff,
   Lock,
   CheckCircle2,
+  AlertTriangle,
+  Pencil,
+  Mail,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CustomSelect } from "@/components/ui/custom-select";
 import { TimezonePicker } from "@/components/timezone-picker";
+import { toast } from "@/components/ui/toast";
 import { api, type UserSettingsResponse } from "@/lib/api";
 import { ApiError, formatApiError } from "@/lib/api-error";
 
@@ -35,6 +40,29 @@ export default function SettingsPage() {
   const [timezone, setTimezone] = useState("UTC");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Email Change Modal State
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [newEmailInput, setNewEmailInput] = useState("");
+  const [emailModalError, setEmailModalError] = useState<string | null>(null);
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<"unverified" | "sending" | "sent">("unverified");
+
+  const DURATION_OPTIONS = [
+    { value: "15", label: "15 minutes" },
+    { value: "30", label: "30 minutes" },
+    { value: "45", label: "45 minutes" },
+    { value: "60", label: "60 minutes (1 hour)" },
+    { value: "90", label: "90 minutes" },
+  ];
+
+  const BUFFER_OPTIONS = [
+    { value: "0", label: "0 minutes (No buffer)" },
+    { value: "5", label: "5 minutes" },
+    { value: "10", label: "10 minutes" },
+    { value: "15", label: "15 minutes" },
+    { value: "30", label: "30 minutes" },
+  ];
 
   // Password / Security Form State
   const [currentPassword, setCurrentPassword] = useState("");
@@ -57,9 +85,6 @@ export default function SettingsPage() {
   const [defaultTimezone, setDefaultTimezone] = useState("UTC");
   const [isSavingScheduling, setIsSavingScheduling] = useState(false);
 
-  // Feedback notifications
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
-
   useEffect(() => {
     void loadSettings();
 
@@ -75,7 +100,6 @@ export default function SettingsPage() {
 
   function handleTabChange(tab: "profile" | "security" | "notifications" | "scheduling") {
     setActiveTab(tab);
-    setFeedback(null);
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.set("tab", tab);
@@ -85,7 +109,6 @@ export default function SettingsPage() {
 
   async function loadSettings() {
     setIsLoading(true);
-    setFeedback(null);
     try {
       const data = await api<UserSettingsResponse>("/settings");
       setSettings(data);
@@ -103,19 +126,78 @@ export default function SettingsPage() {
       setDefaultBuffer(data.schedulingPreferences.defaultBufferMinutes);
       setDefaultTimezone(data.schedulingPreferences.defaultTimezone || data.profile.timezone);
     } catch (err) {
-      setFeedback({
-        type: "error",
-        message: err instanceof Error ? err.message : "Failed to load account settings.",
-      });
+      toast.error("Failed to load settings", err instanceof Error ? err.message : "Network error");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  function openEmailModal() {
+    setNewEmailInput("");
+    setEmailModalError(null);
+    setIsEmailModalOpen(true);
+  }
+
+  function handleVerifyEmail() {
+    setVerificationStatus("sending");
+    setTimeout(() => {
+      setVerificationStatus("sent");
+      toast.success("Verification email sent", `We sent a confirmation link to ${email}. Check your inbox.`);
+    }, 600);
+  }
+
+  async function handleUpdateEmail(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = newEmailInput.trim().toLowerCase();
+
+    if (!trimmed) {
+      setEmailModalError("Please enter an email address.");
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmed)) {
+      setEmailModalError("Please enter a valid email address.");
+      return;
+    }
+    if (trimmed === email.toLowerCase()) {
+      setEmailModalError("New email must be different from current email.");
+      return;
+    }
+
+    setIsSavingEmail(true);
+    setEmailModalError(null);
+    try {
+      const updated = await api<UserSettingsResponse>("/settings/profile", {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: name.trim(),
+          email: trimmed,
+          username: username.trim(),
+          timezone,
+          avatarUrl: avatarUrl.trim() || null,
+        }),
+      });
+      setSettings(updated);
+      setEmail(updated.profile.email);
+      setIsEmailModalOpen(false);
+      toast.success("Email address updated", `Your account email was changed to ${trimmed}.`);
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("sched_user_updated", { detail: updated.profile })
+        );
+      }
+    } catch (err) {
+      const msg = formatApiError(err, "Failed to update email.");
+      setEmailModalError(msg);
+    } finally {
+      setIsSavingEmail(false);
     }
   }
 
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
     setIsSavingProfile(true);
-    setFeedback(null);
     try {
       const updated = await api<UserSettingsResponse>("/settings/profile", {
         method: "PATCH",
@@ -128,8 +210,8 @@ export default function SettingsPage() {
         }),
       });
       setSettings(updated);
-      setFeedback({ type: "success", message: "Profile settings saved successfully." });
-      
+      toast.success("Profile saved", "Your personal profile details have been updated.");
+
       // Real-time synchronization with Header and Sidebar user buttons
       if (typeof window !== "undefined") {
         window.dispatchEvent(
@@ -138,7 +220,7 @@ export default function SettingsPage() {
       }
     } catch (err) {
       const msg = formatApiError(err, "Failed to update profile.");
-      setFeedback({ type: "error", message: msg });
+      toast.error("Profile update failed", msg);
     } finally {
       setIsSavingProfile(false);
     }
@@ -146,15 +228,14 @@ export default function SettingsPage() {
 
   async function handleSavePassword(e: React.FormEvent) {
     e.preventDefault();
-    setFeedback(null);
 
     if (newPassword.length < 8) {
-      setFeedback({ type: "error", message: "New password must be at least 8 characters long." });
+      toast.warning("Password too short", "New password must be at least 8 characters long.");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setFeedback({ type: "error", message: "New passwords do not match. Please re-enter." });
+      toast.warning("Password mismatch", "New passwords do not match. Please re-enter.");
       return;
     }
 
@@ -168,7 +249,7 @@ export default function SettingsPage() {
         }),
       });
 
-      setFeedback({ type: "success", message: response.message || "Your password has been changed successfully." });
+      toast.success("Password changed", response.message || "Your password has been changed successfully.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -177,7 +258,7 @@ export default function SettingsPage() {
       if (err instanceof ApiError && err.body.error.code === "INVALID_CURRENT_PASSWORD") {
         msg = "The current password you entered is incorrect.";
       }
-      setFeedback({ type: "error", message: msg });
+      toast.error("Password change failed", msg);
     } finally {
       setIsSavingPassword(false);
     }
@@ -186,7 +267,6 @@ export default function SettingsPage() {
   async function handleSaveNotifications(e: React.FormEvent) {
     e.preventDefault();
     setIsSavingNotifications(true);
-    setFeedback(null);
     try {
       const updated = await api<UserSettingsResponse>("/settings/notifications", {
         method: "PATCH",
@@ -197,12 +277,9 @@ export default function SettingsPage() {
         }),
       });
       setSettings(updated);
-      setFeedback({ type: "success", message: "Notification preferences updated." });
+      toast.success("Preferences updated", "Your notification preferences have been saved.");
     } catch (err) {
-      setFeedback({
-        type: "error",
-        message: err instanceof Error ? err.message : "Failed to update notification preferences.",
-      });
+      toast.error("Update failed", err instanceof Error ? err.message : "Failed to update notification preferences.");
     } finally {
       setIsSavingNotifications(false);
     }
@@ -211,7 +288,6 @@ export default function SettingsPage() {
   async function handleSaveScheduling(e: React.FormEvent) {
     e.preventDefault();
     setIsSavingScheduling(true);
-    setFeedback(null);
     try {
       const updated = await api<UserSettingsResponse>("/settings/scheduling", {
         method: "PATCH",
@@ -222,12 +298,9 @@ export default function SettingsPage() {
         }),
       });
       setSettings(updated);
-      setFeedback({ type: "success", message: "Default scheduling preferences saved." });
+      toast.success("Preferences updated", "Default scheduling rules have been saved.");
     } catch (err) {
-      setFeedback({
-        type: "error",
-        message: err instanceof Error ? err.message : "Failed to update scheduling preferences.",
-      });
+      toast.error("Update failed", err instanceof Error ? err.message : "Failed to update scheduling preferences.");
     } finally {
       setIsSavingScheduling(false);
     }
@@ -238,12 +311,12 @@ export default function SettingsPage() {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      setFeedback({ type: "error", message: "Please select a valid image file (PNG, JPG, WebP)." });
+      toast.error("Invalid file", "Please select a valid image file (PNG, JPG, WebP).");
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setFeedback({ type: "error", message: "Image size must be less than 5MB." });
+      toast.error("File too large", "Image size must be less than 5MB.");
       return;
     }
 
@@ -273,7 +346,7 @@ export default function SettingsPage() {
           ctx.drawImage(img, 0, 0, width, height);
           const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
           setAvatarUrl(compressedDataUrl);
-          setFeedback({ type: "success", message: "Photo loaded! Click 'Save Profile' to apply your new avatar." });
+          toast.success("Photo loaded", "Click 'Save Profile' to apply your new avatar.");
         }
       };
       img.src = event.target?.result as string;
@@ -305,95 +378,78 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="px-4 sm:px-6 md:px-10 lg:px-14 py-4 sm:py-6 md:py-8 w-full space-y-6 max-w-4xl pb-12">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)]">
-          Account Settings
-        </h1>
-        <p className="mt-1 text-xs sm:text-sm text-[var(--text-secondary)]">
-          Manage your personal profile, security credentials, delivery preferences, and scheduling defaults.
-        </p>
-      </div>
-
-      {/* Global Feedback Alert */}
-      {feedback && (
-        <div
-          className={`flex items-start gap-3 rounded-xl border p-4 text-xs transition-all duration-150 shadow-2xs ${
-            feedback.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-              : "border-rose-200 bg-rose-50 text-rose-900"
-          }`}
-        >
-          {feedback.type === "success" ? (
-            <Check className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
-          ) : (
-            <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
-          )}
-          <span className="font-semibold leading-relaxed">{feedback.message}</span>
+    <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 w-full space-y-6 pb-12">
+      <div className="bg-surface rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 space-y-6 shadow-xs">
+        {/* Header */}
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text-primary">
+            Account Settings
+          </h1>
+          <p className="mt-1 text-xs sm:text-sm text-text-sub">
+            Manage your personal profile, security credentials, delivery preferences, and scheduling defaults.
+          </p>
         </div>
-      )}
 
-      {/* Navigation Tabs */}
-      <div className="flex flex-wrap gap-1 border-b border-[var(--border-subtle)]">
-        <button
-          type="button"
-          onClick={() => handleTabChange("profile")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
-            activeTab === "profile"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-neutral-600 hover:text-neutral-900 hover:border-neutral-300"
-          }`}
-        >
-          <UserIcon className="h-4 w-4" />
-          <span>Profile</span>
-        </button>
+        {/* Navigation Tabs */}
+        <div className="flex flex-wrap gap-1.5 p-1 bg-surface-muted/60 rounded-xl w-fit">
+          <button
+            type="button"
+            onClick={() => handleTabChange("profile")}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              activeTab === "profile"
+                ? "bg-blue-50 text-brand shadow-2xs"
+                : "text-text-sub hover:text-brand hover:bg-blue-50/60"
+            }`}
+          >
+            <UserIcon className="h-3.5 w-3.5" />
+            <span>Profile</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => handleTabChange("security")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
-            activeTab === "security"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-neutral-600 hover:text-neutral-900 hover:border-neutral-300"
-          }`}
-        >
-          <KeyRound className="h-4 w-4" />
-          <span>Security & Password</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("security")}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              activeTab === "security"
+                ? "bg-blue-50 text-brand shadow-2xs"
+                : "text-text-sub hover:text-brand hover:bg-blue-50/60"
+            }`}
+          >
+            <KeyRound className="h-3.5 w-3.5" />
+            <span>Security & Password</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => handleTabChange("notifications")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
-            activeTab === "notifications"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-neutral-600 hover:text-neutral-900 hover:border-neutral-300"
-          }`}
-        >
-          <Bell className="h-4 w-4" />
-          <span>Notifications</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("notifications")}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              activeTab === "notifications"
+                ? "bg-blue-50 text-brand shadow-2xs"
+                : "text-text-sub hover:text-brand hover:bg-blue-50/60"
+            }`}
+          >
+            <Bell className="h-3.5 w-3.5" />
+            <span>Notifications</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => handleTabChange("scheduling")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
-            activeTab === "scheduling"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-neutral-600 hover:text-neutral-900 hover:border-neutral-300"
-          }`}
-        >
-          <Clock className="h-4 w-4" />
-          <span>Scheduling Preferences</span>
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => handleTabChange("scheduling")}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              activeTab === "scheduling"
+                ? "bg-blue-50 text-brand shadow-2xs"
+                : "text-text-sub hover:text-brand hover:bg-blue-50/60"
+            }`}
+          >
+            <Clock className="h-3.5 w-3.5" />
+            <span>Scheduling Preferences</span>
+          </button>
+        </div>
 
       {/* Tab 1: Profile Settings */}
       {activeTab === "profile" && (
-        <form onSubmit={handleSaveProfile} className="space-y-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 sm:p-8 shadow-xs">
+        <form onSubmit={handleSaveProfile} className="space-y-6 rounded-2xl bg-surface p-6 sm:p-8 shadow-2xs">
           {/* Avatar Upload Section */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 pb-6 border-b border-[var(--border-subtle)]">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 pb-2">
             <div className="relative group">
               <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-2xl select-none overflow-hidden ring-4 ring-neutral-100 shadow-xs">
                 {avatarUrl ? (
@@ -479,18 +535,71 @@ export default function SettingsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-1.5">
-              <label htmlFor="email" className="text-xs font-semibold text-[var(--text-primary)]">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-xs text-neutral-900 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 focus:outline-none transition-shadow"
-                placeholder="e.g. user@example.com"
-              />
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-text-primary">
+                  Email Address
+                </label>
+                {verificationStatus === "sent" ? (
+                  <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Verification Sent
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                    <AlertTriangle className="h-3 w-3" />
+                    Email not verified
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center gap-2 rounded-xl border border-border-strong bg-surface px-3.5 py-2.5 text-xs text-text-sub select-all">
+                  <Mail className="h-4 w-4 text-text-sub shrink-0" />
+                  <span className="font-mono text-text-primary truncate">{email || "Not set"}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={openEmailModal}
+                  className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-border-strong bg-surface hover:bg-blue-50/80 hover:text-brand hover:border-blue-200 text-text-sub text-xs font-medium transition-colors shadow-2xs cursor-pointer shrink-0"
+                  title="Change email address"
+                >
+                  <Pencil className="h-3.5 w-3.5 text-brand" />
+                  <span>Change</span>
+                </button>
+                {verificationStatus === "unverified" && (
+                  <button
+                    type="button"
+                    onClick={handleVerifyEmail}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white text-xs font-semibold transition-all shadow-xs cursor-pointer shrink-0"
+                  >
+                    Verify Email
+                  </button>
+                )}
+                {verificationStatus === "sending" && (
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-brand/80 text-white text-xs font-semibold cursor-not-allowed shrink-0"
+                  >
+                    <Spinner size="sm" className="mr-1" />
+                    Sending…
+                  </button>
+                )}
+                {verificationStatus === "sent" && (
+                  <button
+                    type="button"
+                    onClick={handleVerifyEmail}
+                    className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-border-subtle bg-surface text-text-sub hover:bg-blue-50 hover:text-brand text-xs font-medium transition-colors cursor-pointer shrink-0"
+                    title="Resend verification link"
+                  >
+                    Resend
+                  </button>
+                )}
+              </div>
+              {verificationStatus === "sent" && (
+                <p className="text-[11px] text-text-muted mt-1">
+                  We sent a confirmation link to <span className="font-mono font-medium text-text-sub">{email}</span>. Click the link to complete verification.
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -505,8 +614,8 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="pt-4 flex items-center justify-end border-t border-[var(--border-subtle)]">
-            <Button type="submit" disabled={isSavingProfile} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl px-5 h-10 text-xs">
+          <div className="pt-2 flex items-center justify-end">
+            <Button type="submit" disabled={isSavingProfile} className="bg-brand hover:bg-brand-hover text-white font-semibold rounded-xl px-5 h-10 text-xs shadow-xs">
               {isSavingProfile && <Spinner size="sm" className="mr-2" />}
               Save Profile Changes
             </Button>
@@ -517,8 +626,8 @@ export default function SettingsPage() {
       {/* Tab 2: Security & Change Password */}
       {activeTab === "security" && (
         <div className="space-y-6">
-          <form onSubmit={handleSavePassword} className="space-y-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 sm:p-8 shadow-xs">
-            <div className="flex items-start gap-4 pb-5 border-b border-[var(--border-subtle)]">
+          <form onSubmit={handleSavePassword} className="space-y-6 rounded-2xl bg-surface p-6 sm:p-8 shadow-2xs">
+            <div className="flex items-start gap-4 pb-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 shrink-0">
                 <Lock className="h-5 w-5" />
               </div>
@@ -620,11 +729,11 @@ export default function SettingsPage() {
               </ul>
             </div>
 
-            <div className="pt-4 flex items-center justify-end border-t border-[var(--border-subtle)]">
+            <div className="pt-2 flex items-center justify-end">
               <Button
                 type="submit"
                 disabled={isSavingPassword || !currentPassword || !newPassword || !confirmPassword}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl px-5 h-10 text-xs"
+                className="bg-brand hover:bg-brand-hover text-white font-semibold rounded-xl px-5 h-10 text-xs shadow-xs"
               >
                 {isSavingPassword && <Spinner size="sm" className="mr-2" />}
                 Update Password
@@ -633,7 +742,7 @@ export default function SettingsPage() {
           </form>
 
           {/* Security Status Box */}
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 shadow-xs flex items-center justify-between">
+          <div className="rounded-2xl bg-surface p-6 shadow-2xs flex items-center justify-between">
             <div className="flex items-center gap-3.5">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 shrink-0">
                 <CheckCircle2 className="h-5 w-5" />
@@ -643,7 +752,7 @@ export default function SettingsPage() {
                 <p className="text-[11px] text-neutral-500">Your credentials are cryptographically secured with salted Argon2id memory-hard hashing.</p>
               </div>
             </div>
-            <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+            <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
               Protected
             </span>
           </div>
@@ -652,14 +761,14 @@ export default function SettingsPage() {
 
       {/* Tab 3: Delivery Notifications */}
       {activeTab === "notifications" && (
-        <form onSubmit={handleSaveNotifications} className="space-y-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 sm:p-8 shadow-xs">
+        <form onSubmit={handleSaveNotifications} className="space-y-6 rounded-2xl bg-surface p-6 sm:p-8 shadow-2xs">
           <div>
             <h2 className="text-sm font-bold text-[var(--text-primary)]">Email Notifications</h2>
             <p className="text-xs text-[var(--text-secondary)] mt-0.5">Choose which transactional emails and system reminders you receive.</p>
           </div>
 
-          <div className="space-y-3 divide-y divide-[var(--border-subtle)]">
-            <label className="flex items-start justify-between pt-3 cursor-pointer">
+          <div className="space-y-3">
+            <label className="flex items-start justify-between py-2 cursor-pointer hover:bg-surface-subtle px-3 rounded-xl transition-colors">
               <div className="space-y-0.5 pr-4">
                 <span className="text-xs font-semibold text-[var(--text-primary)]">Email Reminders</span>
                 <p className="text-[11px] text-[var(--text-muted)]">
@@ -674,7 +783,7 @@ export default function SettingsPage() {
               />
             </label>
 
-            <label className="flex items-start justify-between pt-3 cursor-pointer">
+            <label className="flex items-start justify-between py-2 cursor-pointer hover:bg-surface-subtle px-3 rounded-xl transition-colors">
               <div className="space-y-0.5 pr-4">
                 <span className="text-xs font-semibold text-[var(--text-primary)]">Booking Confirmations</span>
                 <p className="text-[11px] text-[var(--text-muted)]">
@@ -689,7 +798,7 @@ export default function SettingsPage() {
               />
             </label>
 
-            <label className="flex items-start justify-between pt-3 cursor-pointer">
+            <label className="flex items-start justify-between py-2 cursor-pointer hover:bg-surface-subtle px-3 rounded-xl transition-colors">
               <div className="space-y-0.5 pr-4">
                 <span className="text-xs font-semibold text-[var(--text-primary)]">Product Updates & Tips</span>
                 <p className="text-[11px] text-[var(--text-muted)]">
@@ -705,8 +814,8 @@ export default function SettingsPage() {
             </label>
           </div>
 
-          <div className="pt-4 flex items-center justify-end border-t border-[var(--border-subtle)]">
-            <Button type="submit" disabled={isSavingNotifications} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl px-5 h-10 text-xs">
+          <div className="pt-2 flex items-center justify-end">
+            <Button type="submit" disabled={isSavingNotifications} className="bg-brand hover:bg-brand-hover text-white font-semibold rounded-xl px-5 h-10 text-xs shadow-xs">
               {isSavingNotifications && <Spinner size="sm" className="mr-2" />}
               Save Preferences
             </Button>
@@ -716,7 +825,7 @@ export default function SettingsPage() {
 
       {/* Tab 4: Default Scheduling Preferences */}
       {activeTab === "scheduling" && (
-        <form onSubmit={handleSaveScheduling} className="space-y-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 sm:p-8 shadow-xs">
+        <form onSubmit={handleSaveScheduling} className="space-y-6 rounded-2xl bg-surface p-6 sm:p-8 shadow-2xs">
           <div>
             <h2 className="text-sm font-bold text-[var(--text-primary)]">Default Scheduling Rules</h2>
             <p className="text-xs text-[var(--text-secondary)] mt-0.5">Set default duration and buffer presets used when creating new event types.</p>
@@ -724,39 +833,27 @@ export default function SettingsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-1.5">
-              <label htmlFor="duration" className="text-xs font-semibold text-[var(--text-primary)]">
-                Default Meeting Duration (Minutes)
+              <label htmlFor="duration" className="text-xs font-semibold text-text-primary">
+                Default Meeting Duration
               </label>
-              <select
+              <CustomSelect
                 id="duration"
-                value={defaultDuration}
-                onChange={(e) => setDefaultDuration(Number(e.target.value))}
-                className="w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-xs text-neutral-900 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 focus:outline-none transition-shadow"
-              >
-                <option value={15}>15 minutes</option>
-                <option value={30}>30 minutes</option>
-                <option value={45}>45 minutes</option>
-                <option value={60}>60 minutes (1 hour)</option>
-                <option value={90}>90 minutes</option>
-              </select>
+                value={String(defaultDuration)}
+                onChange={(val) => setDefaultDuration(Number(val))}
+                options={DURATION_OPTIONS}
+              />
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="buffer" className="text-xs font-semibold text-[var(--text-primary)]">
-                Default Buffer Time (Minutes)
+              <label htmlFor="buffer" className="text-xs font-semibold text-text-primary">
+                Default Buffer Time
               </label>
-              <select
+              <CustomSelect
                 id="buffer"
-                value={defaultBuffer}
-                onChange={(e) => setDefaultBuffer(Number(e.target.value))}
-                className="w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-xs text-neutral-900 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 focus:outline-none transition-shadow"
-              >
-                <option value={0}>0 minutes (No buffer)</option>
-                <option value={5}>5 minutes</option>
-                <option value={10}>10 minutes</option>
-                <option value={15}>15 minutes</option>
-                <option value={30}>30 minutes</option>
-              </select>
+                value={String(defaultBuffer)}
+                onChange={(val) => setDefaultBuffer(Number(val))}
+                options={BUFFER_OPTIONS}
+              />
             </div>
           </div>
 
@@ -771,13 +868,102 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div className="pt-4 flex items-center justify-end border-t border-[var(--border-subtle)]">
-            <Button type="submit" disabled={isSavingScheduling} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl px-5 h-10 text-xs">
+          <div className="pt-2 flex items-center justify-end">
+            <Button type="submit" disabled={isSavingScheduling} className="bg-brand hover:bg-brand-hover text-white font-semibold rounded-xl px-5 h-10 text-xs shadow-xs">
               {isSavingScheduling && <Spinner size="sm" className="mr-2" />}
               Save Scheduling Defaults
             </Button>
           </div>
         </form>
+      )}
+      </div>
+
+      {/* Change Email Modal */}
+      {isEmailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs animate-in fade-in duration-150">
+          <div
+            className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl border border-border-subtle space-y-5 animate-in zoom-in-95 duration-150"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="email-modal-headline"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 id="email-modal-headline" className="text-base font-semibold text-text-primary">
+                  Change Account Email
+                </h3>
+                <p className="mt-1 text-xs text-text-sub">
+                  Update your primary email address for signing in and notifications.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEmailModalOpen(false)}
+                className="rounded-lg p-1 text-text-sub hover:bg-blue-50/80 hover:text-brand transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateEmail} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-text-sub">
+                  Current Email
+                </label>
+                <div className="rounded-xl bg-surface-subtle border border-border-subtle px-3.5 py-2 text-xs font-mono text-text-sub select-all">
+                  {email}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="newEmailInput" className="text-xs font-semibold text-text-primary">
+                  New Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-sub pointer-events-none" />
+                  <input
+                    id="newEmailInput"
+                    type="email"
+                    value={newEmailInput}
+                    onChange={(e) => {
+                      setNewEmailInput(e.target.value);
+                      if (emailModalError) setEmailModalError(null);
+                    }}
+                    placeholder="Enter new email address"
+                    autoFocus
+                    required
+                    className="w-full rounded-xl border border-border-subtle bg-surface pl-9 pr-3.5 py-2 text-xs text-text-primary placeholder:text-text-sub/50 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none transition-shadow"
+                  />
+                </div>
+                {emailModalError && (
+                  <p className="text-[11px] font-medium text-rose-600 flex items-center gap-1 mt-1">
+                    <AlertCircle className="h-3 w-3 shrink-0" />
+                    <span>{emailModalError}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEmailModalOpen(false)}
+                  disabled={isSavingEmail}
+                  className="rounded-xl px-4 py-2 text-xs font-medium text-text-sub hover:bg-blue-50/80 hover:text-brand transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <Button
+                  type="submit"
+                  disabled={isSavingEmail}
+                  className="bg-brand hover:bg-brand-hover text-white rounded-xl px-4 py-2 text-xs font-semibold shadow-xs"
+                >
+                  {isSavingEmail && <Spinner size="sm" className="mr-2" />}
+                  Save Email
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
