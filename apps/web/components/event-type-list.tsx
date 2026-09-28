@@ -171,9 +171,9 @@ function EventTypeListContent() {
   }, [items, searchQuery]);
 
   return (
-    <div className="w-full relative">
-      {/* Main Content Section */}
-      <div className="w-full space-y-6">
+    <div className="flex w-full min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] items-start">
+      {/* Main Content Section: smoothly shrinks horizontally when SidePanel opens */}
+      <div className="flex-1 min-w-0 transition-all duration-300 ease-in-out px-4 sm:px-6 md:px-10 lg:px-14 py-4 sm:py-6 md:py-8 space-y-6">
         {/* Calendly Secondary Header Row (Directly under Top Navbar) */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-2">

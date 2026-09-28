@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  X,
   MapPin,
   PhoneCall,
   Link2,
@@ -24,9 +23,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
+import { SidePanel } from "@/components/ui/side-panel";
 import { api, apiUrl, type CurrentUser, type EventType } from "@/lib/api";
 import { ApiError, fieldErrors } from "@/lib/api-error";
-import { useScrollLock } from "@/lib/use-scroll-lock";
 import type { LocationType, CustomQuestion, ScheduleResponse, ZoomIntegrationResponse } from "@sched/api-contract";
 
 const DURATION_PRESETS = [15, 30, 45, 60];
@@ -88,9 +87,6 @@ export function EventTypeDrawer({
     host: true,
     questions: true,
   });
-
-  // Lock background body scroll when drawer overlay is open
-  useScrollLock(isOpen);
 
   // Form Fields
   const [title, setTitle] = useState("");
@@ -405,43 +401,49 @@ export function EventTypeDrawer({
     }
   }
 
-  return (
+  const footerContent = (
     <>
-      {/* Full Backdrop Overlay on Desktop and Mobile */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-40 backdrop-blur-xs transition-opacity duration-300"
-          onClick={onClose}
-        />
+      {locationType === "ZOOM" && isZoomConnected === false && (
+        <span className="text-xs text-amber-600 font-medium mr-auto hidden sm:inline">
+          Connect Zoom to continue
+        </span>
       )}
-
-      {/* Slide-over Drawer with contained scrolling */}
-      <div
-        className={`fixed inset-y-0 right-0 z-50 transition-transform duration-300 ease-in-out w-full sm:w-[500px] md:w-[540px] max-w-full ${
-          isOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
-        }`}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onClose}
+        className="rounded-full text-xs font-semibold px-4 cursor-pointer"
       >
-        <aside className="w-full h-full border-l border-neutral-200 bg-white shadow-2xl flex flex-col">
-          {/* Drawer Top Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 sticky top-0 bg-white z-10 shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                {eventTypeId ? "Edit Event Type" : "New Event Type"}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="h-8 w-8 flex items-center justify-center rounded-full text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer"
-              title="Close panel"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+        Cancel
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        disabled={isSaving || (locationType === "ZOOM" && isZoomConnected === false)}
+        onClick={handleSave}
+        className="rounded-full bg-brand hover:bg-brand-hover text-white text-xs font-semibold px-5 shadow-2xs gap-1.5 cursor-pointer disabled:opacity-50"
+      >
+        {isSaving ? (
+          <>
+            <Spinner size="sm" />
+            <span>Saving…</span>
+          </>
+        ) : (
+          <span>{eventTypeId ? "Save changes" : "Create event type"}</span>
+        )}
+      </Button>
+    </>
+  );
 
-          {/* Drawer Scrollable Content - isolated scroll with overscroll-contain */}
-          <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-5 space-y-6">
-          {/* Title Identity Header - Directly Editable in Real-time with Bolder Divider */}
+  return (
+    <SidePanel
+      isOpen={isOpen}
+      onClose={onClose}
+      title={eventTypeId ? "Edit Event Type" : "New Event Type"}
+      footer={footerContent}
+    >
+      {/* Title Identity Header - Directly Editable in Real-time with Bolder Divider */}
           <div className="space-y-1 pb-5 border-b-2 border-neutral-300">
             <div className="flex items-center gap-2.5">
               <span className="h-3.5 w-3.5 rounded-full bg-blue-600 shrink-0" />
@@ -1123,43 +1125,7 @@ export function EventTypeDrawer({
               </div>
             </div>
           )}
-        </div>
 
-        {/* Drawer Sticky Bottom Action Bar (Preview button removed) */}
-        <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0 z-10">
-          {locationType === "ZOOM" && isZoomConnected === false && (
-            <span className="text-xs text-amber-600 font-medium mr-auto hidden sm:inline">
-              Connect Zoom to continue
-            </span>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            className="rounded-full border-neutral-300 text-xs font-semibold px-4 cursor-pointer"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            disabled={isSaving || (locationType === "ZOOM" && isZoomConnected === false)}
-            onClick={handleSave}
-            className="rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-5 shadow-2xs gap-1.5 cursor-pointer disabled:opacity-50"
-          >
-            {isSaving ? (
-              <>
-                <Spinner size="sm" />
-                <span>Saving…</span>
-              </>
-            ) : (
-              <span>{eventTypeId ? "Save changes" : "Create event type"}</span>
-            )}
-          </Button>
-        </div>
-      </aside>
-    </div>
-    </>
+    </SidePanel>
   );
 }
