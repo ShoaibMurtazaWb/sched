@@ -18,8 +18,8 @@ import {
   Settings,
   Menu,
   X,
-  ChevronsLeft,
-  ChevronsRight,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -374,7 +374,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] flex flex-col antialiased selection:bg-blue-600 selection:text-white">
+    <div className="h-screen overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)] flex flex-col antialiased selection:bg-blue-600 selection:text-white">
       {/* Mobile Navigation Drawer Sheet (Sched Mobile Sidebar) */}
       <div
         className={`fixed inset-0 z-50 md:hidden transition-all duration-300 ${
@@ -473,12 +473,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main App Container */}
-      <div className="flex flex-1 min-h-screen md:min-h-0">
+      <div className="flex flex-1 min-h-0 h-full overflow-hidden">
 
         {/* Desktop Sidebar Navigation Container */}
-        <div className="hidden md:block relative shrink-0">
+        <div className="hidden md:block relative shrink-0 h-full">
           <aside
-            className={`flex flex-col justify-between bg-surface transition-[width] duration-300 ease-in-out md:sticky md:top-0 md:h-screen ${
+            className={`flex flex-col justify-between bg-canvas transition-[width] duration-300 ease-in-out h-full ${
               isCollapsed ? "md:w-[88px]" : "md:w-[260px]"
             }`}
           >
@@ -621,22 +621,22 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isCollapsed ? (
-              <ChevronsRight className="h-4 w-4 stroke-[2.2]" />
+              <PanelLeftOpen className="h-4 w-4 stroke-[2]" />
             ) : (
-              <ChevronsLeft className="h-4 w-4 stroke-[2.2]" />
+              <PanelLeftClose className="h-4 w-4 stroke-[2]" />
             )}
           </button>
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 min-w-0 flex flex-col min-h-screen bg-canvas">
+        <div className="flex-1 min-w-0 flex flex-col h-full min-h-0 bg-canvas overflow-hidden">
           {/* Mobile Header Bar (< md) - Compact 56px, left hamburger + Sched brand, right theme switcher & avatar */}
-          <header className="md:hidden sticky top-0 z-40 flex h-14 w-full items-center justify-between bg-surface px-4 shadow-2xs shrink-0">
+          <header className="md:hidden sticky top-0 z-40 flex h-14 w-full items-center justify-between bg-canvas px-4 shrink-0">
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(true)}
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface text-text-main hover:bg-blue-50/70 hover:text-brand transition-colors cursor-pointer"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-transparent text-text-main hover:bg-blue-50/70 hover:text-brand transition-colors cursor-pointer"
                 aria-label="Open navigation menu"
               >
                 <Menu className="h-5 w-5" />
@@ -741,7 +741,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </header>
 
           {/* Top Bar with User Profile Dropdown (Full Width, Header with Sched design tokens) */}
-          <header className="hidden md:flex h-15 w-full items-center justify-end bg-surface px-6 sm:px-8 gap-4">
+          <header className="hidden md:flex h-15 w-full items-center justify-end bg-canvas px-6 sm:px-8 gap-4 shrink-0">
             <ThemeSwitcher align="right" />
 
             {/* User Profile Dropdown Menu in Top Navbar */}
@@ -849,8 +849,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Dynamic Page Body (Full Width) */}
-          <main className="flex-1 w-full max-w-full min-w-0">
+          {/* Dynamic Page Body (Fixed viewport, does not scroll page-level) */}
+          <main className="flex-1 w-full max-w-full min-w-0 min-h-0 overflow-hidden flex flex-col">
             {children}
           </main>
         </div>

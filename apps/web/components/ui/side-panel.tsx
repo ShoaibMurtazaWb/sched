@@ -104,7 +104,7 @@ export function SidePanel({
           ${isOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"}
 
           /* Desktop Responsive In-Flow Styles: Part of layout, separate rounded surface without borders */
-          lg:static lg:inset-auto lg:top-0 lg:right-auto lg:z-10 lg:translate-x-0 lg:opacity-100 lg:h-[calc(100vh-6rem)] lg:sticky lg:top-24 lg:shrink-0 lg:transition-[width,margin,opacity] lg:duration-300 lg:ease-in-out
+          lg:static lg:inset-auto lg:top-0 lg:right-auto lg:z-10 lg:translate-x-0 lg:opacity-100 lg:h-full lg:sticky lg:top-0 lg:shrink-0 lg:transition-[width,margin,opacity] lg:duration-300 lg:ease-in-out
           ${
             isOpen
               ? `${desktopWidthClass} lg:ml-4 lg:max-w-[45vw] lg:rounded-2xl lg:shadow-sm lg:border-0 lg:pointer-events-auto`
