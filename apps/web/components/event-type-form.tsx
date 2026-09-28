@@ -394,18 +394,8 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
       } else if (attendeeCallsHostPhone.trim().length < 7) {
         nextErrors["location.data.hostPhoneNumber"] = "Please enter a valid phone number";
       }
-    }
-
-    if (Object.keys(nextErrors).length > 0) {
-      setFields(nextErrors);
-      toast.error("Please complete required fields", "Check the highlighted fields to continue.");
-      return;
-    }
-
-    if (locationType === "ZOOM" && isZoomConnected === false) {
-      setError("Please connect your Zoom account first or choose another location.");
-      toast.error("Zoom account not connected", "Please connect Zoom or choose another location.");
-      return;
+    } else if (locationType === "ZOOM" && isZoomConnected === false) {
+      nextErrors.location = "Please connect your Zoom account first or choose another location.";
     }
 
     const locationConfig = buildLocationConfig();
@@ -424,13 +414,27 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
       : createEventTypeBodySchema.safeParse(raw);
 
     if (!parsed.success) {
-      const next: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
         const pathKey = issue.path.join(".");
-        if (!next[pathKey]) next[pathKey] = issue.message;
+        if (!nextErrors[pathKey]) nextErrors[pathKey] = issue.message;
       }
-      setFields(next);
-      toast.error("Please complete required fields", "Check the highlighted fields to continue.");
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFields(nextErrors);
+      if (nextErrors.title) {
+        document.getElementById("title")?.focus();
+      } else if (nextErrors["location.data.address"] || nextErrors.inPersonAddress) {
+        document.getElementById("inPersonAddress")?.focus();
+      } else if (nextErrors["location.data.url"] || nextErrors.customLinkUrl) {
+        document.getElementById("customLinkUrl")?.focus();
+      } else if (nextErrors["location.data.hostPhoneNumber"] || nextErrors.attendeeCallsHostPhone) {
+        document.getElementById("attendeeCallsHostPhone")?.focus();
+      } else if (nextErrors.slug) {
+        document.getElementById("slug")?.focus();
+      } else if (nextErrors.description) {
+        document.getElementById("description")?.focus();
+      }
       return;
     }
 
@@ -451,18 +455,36 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
       }
       router.push("/dashboard");
     } catch (caught) {
-      const userMessage = formatApiError(
-        caught,
-        eventTypeId
-          ? "Unable to update event. Please try again."
-          : "Unable to create event. Please try again."
-      );
-      setError(userMessage);
       const serverFields = fieldErrors(caught);
-      if (Object.keys(serverFields).length > 0) {
+      if (
+        serverFields.slug ||
+        (caught instanceof ApiError && caught.body.error?.code === "EVENT_TYPE_SLUG_CONFLICT")
+      ) {
+        setFields((prev) => ({
+          ...prev,
+          title: "You already have an event type with this title in your account. Please choose a different title.",
+        }));
+        document.getElementById("title")?.focus();
+      } else if (Object.keys(serverFields).length > 0) {
         setFields((prev) => ({ ...prev, ...serverFields }));
-        toast.error("Please complete required fields", userMessage);
+        if (serverFields.title) {
+          document.getElementById("title")?.focus();
+        } else if (serverFields.address || serverFields["location.data.address"]) {
+          document.getElementById("inPersonAddress")?.focus();
+        } else if (serverFields.url || serverFields["location.data.url"]) {
+          document.getElementById("customLinkUrl")?.focus();
+        } else if (serverFields.hostPhoneNumber || serverFields["location.data.hostPhoneNumber"]) {
+          document.getElementById("attendeeCallsHostPhone")?.focus();
+        } else if (serverFields.slug) {
+          document.getElementById("slug")?.focus();
+        }
       } else {
+        const userMessage = formatApiError(
+          caught,
+          eventTypeId
+            ? "Unable to update event. Please try again."
+            : "Unable to create event. Please try again."
+        );
         toast.error(
           eventTypeId ? "Unable to update event" : "Unable to create event",
           userMessage
@@ -696,20 +718,22 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
                         value={inPersonAddress}
                         onChange={(e) => {
                           setInPersonAddress(e.target.value);
-                          if (fields["location.data.address"]) {
+                          if (fields["location.data.address"] || fields.inPersonAddress) {
                             setFields((prev) => {
                               const copy = { ...prev };
                               delete copy["location.data.address"];
+                              delete copy.inPersonAddress;
                               return copy;
                             });
                           }
                         }}
                         placeholder="e.g. 100 Montgomery St, Suite 400, San Francisco, CA"
                         required
+                        aria-invalid={Boolean(fields["location.data.address"] || fields.inPersonAddress)}
                       />
-                      {fields["location.data.address"] && (
+                      {(fields["location.data.address"] || fields.inPersonAddress) && (
                         <p className="text-xs text-[var(--status-danger-text)] font-medium">
-                          {fields["location.data.address"]}
+                          {fields["location.data.address"] || fields.inPersonAddress}
                         </p>
                       )}
                     </div>
@@ -737,20 +761,22 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
                         value={customLinkUrl}
                         onChange={(e) => {
                           setCustomLinkUrl(e.target.value);
-                          if (fields["location.data.url"]) {
+                          if (fields["location.data.url"] || fields.customLinkUrl) {
                             setFields((prev) => {
                               const copy = { ...prev };
                               delete copy["location.data.url"];
+                              delete copy.customLinkUrl;
                               return copy;
                             });
                           }
                         }}
                         placeholder="https://app.customroom.com/your-room"
                         required
+                        aria-invalid={Boolean(fields["location.data.url"] || fields.customLinkUrl)}
                       />
-                      {fields["location.data.url"] && (
+                      {(fields["location.data.url"] || fields.customLinkUrl) && (
                         <p className="text-xs text-[var(--status-danger-text)] font-medium">
-                          {fields["location.data.url"]}
+                          {fields["location.data.url"] || fields.customLinkUrl}
                         </p>
                       )}
                     </div>
@@ -791,13 +817,24 @@ export function EventTypeForm({ eventTypeId }: EventTypeFormProps) {
                       <Input
                         id="attendeeCallsHostPhone"
                         value={attendeeCallsHostPhone}
-                        onChange={(e) => setAttendeeCallsHostPhone(e.target.value)}
+                        onChange={(e) => {
+                          setAttendeeCallsHostPhone(e.target.value);
+                          if (fields["location.data.hostPhoneNumber"] || fields.attendeeCallsHostPhone) {
+                            setFields((prev) => {
+                              const copy = { ...prev };
+                              delete copy["location.data.hostPhoneNumber"];
+                              delete copy.attendeeCallsHostPhone;
+                              return copy;
+                            });
+                          }
+                        }}
                         placeholder="+1 (555) 123-4567"
                         required
+                        aria-invalid={Boolean(fields["location.data.hostPhoneNumber"] || fields.attendeeCallsHostPhone)}
                       />
-                      {fields["location.data.hostPhoneNumber"] && (
+                      {(fields["location.data.hostPhoneNumber"] || fields.attendeeCallsHostPhone) && (
                         <p className="text-xs text-[var(--status-danger-text)] font-medium">
-                          {fields["location.data.hostPhoneNumber"]}
+                          {fields["location.data.hostPhoneNumber"] || fields.attendeeCallsHostPhone}
                         </p>
                       )}
                       <p className="text-[11px] text-[var(--text-muted)]">

@@ -108,7 +108,6 @@ export function EventTypeDrawer({
   const [schedule, setSchedule] = useState<ScheduleResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Accordion Section States - questions expanded by default so section is clearly visible
@@ -186,7 +185,6 @@ export function EventTypeDrawer({
   useEffect(() => {
     if (!isOpen) return;
 
-    setError(null);
     setErrors({});
 
     if (!eventTypeId) {
@@ -256,7 +254,7 @@ export function EventTypeDrawer({
         }
       })
       .catch(() => {
-        setError("Could not load event type details.");
+        toast.error("Could not load event", "Could not load event type details.");
       })
       .finally(() => {
         setIsLoading(false);
@@ -354,7 +352,6 @@ export function EventTypeDrawer({
 
   async function handleSave() {
     setIsSaving(true);
-    setError(null);
     setErrors({});
 
     const newErrors: Record<string, string> = {};
@@ -391,7 +388,15 @@ export function EventTypeDrawer({
       ) {
         setOpenSections((prev) => ({ ...prev, location: true }));
       }
-      toast.error("Please complete required fields", "Check the highlighted fields to continue.");
+      if (newErrors.title) {
+        document.getElementById("event-type-title")?.focus();
+      } else if (newErrors.inPersonAddress) {
+        setTimeout(() => document.getElementById("drawer-address")?.focus(), 50);
+      } else if (newErrors.customLinkUrl) {
+        setTimeout(() => document.getElementById("drawer-custom-url")?.focus(), 50);
+      } else if (newErrors.attendeeCallsHostPhone) {
+        setTimeout(() => document.getElementById("drawer-phone")?.focus(), 50);
+      }
       setIsSaving(false);
       return;
     }
@@ -458,22 +463,34 @@ export function EventTypeDrawer({
       onSaved();
       onClose();
     } catch (caught: unknown) {
-      const userMessage = formatApiError(
-        caught,
-        eventTypeId
-          ? "Unable to update event. Please try again."
-          : "Unable to create event. Please try again."
-      );
-      setError(userMessage);
       const serverFields = fieldErrors(caught);
-      if (serverFields.slug || (caught instanceof ApiError && caught.body.error?.code === "EVENT_TYPE_SLUG_CONFLICT")) {
-        serverFields.title = "You already have an event type with this title in your account. Please choose a different title.";
-        setErrors((prev) => ({ ...prev, ...serverFields }));
-        toast.error("Event title already exists", "You already have an event type with this title in your account. Please choose a different title.");
+      if (
+        serverFields.slug ||
+        (caught instanceof ApiError && caught.body.error?.code === "EVENT_TYPE_SLUG_CONFLICT")
+      ) {
+        setErrors((prev) => ({
+          ...prev,
+          title: "You already have an event type with this title in your account. Please choose a different title.",
+        }));
+        document.getElementById("event-type-title")?.focus();
       } else if (Object.keys(serverFields).length > 0) {
         setErrors((prev) => ({ ...prev, ...serverFields }));
-        toast.error("Please complete required fields", userMessage);
+        if (serverFields.title) {
+          document.getElementById("event-type-title")?.focus();
+        } else if (serverFields.address || serverFields["location.data.address"]) {
+          setOpenSections((prev) => ({ ...prev, location: true }));
+          setTimeout(() => document.getElementById("drawer-address")?.focus(), 50);
+        } else if (serverFields.url || serverFields["location.data.url"]) {
+          setOpenSections((prev) => ({ ...prev, location: true }));
+          setTimeout(() => document.getElementById("drawer-custom-url")?.focus(), 50);
+        }
       } else {
+        const userMessage = formatApiError(
+          caught,
+          eventTypeId
+            ? "Unable to update event. Please try again."
+            : "Unable to create event. Please try again."
+        );
         toast.error(
           eventTypeId ? "Unable to update event" : "Unable to create event",
           userMessage
@@ -585,13 +602,6 @@ export function EventTypeDrawer({
           </p>
         )}
       </div>
-
-      {error && (
-        <div className="flex items-start gap-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-600 dark:text-rose-400 font-medium">
-          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          <span>{error}</span>
-        </div>
-      )}
 
       {isLoading ? (
         <div className="space-y-4 py-8 text-center text-xs text-text-muted">
