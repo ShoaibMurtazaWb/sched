@@ -2,53 +2,45 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-export type Theme = "light" | "dark" | "system";
-export type ResolvedTheme = "light" | "dark";
+export type Theme = "light" | "dark";
 
 interface ThemeContextType {
   theme: Theme;
-  resolvedTheme: ResolvedTheme;
   setTheme: (theme: Theme) => void;
+  toggleTheme: () => void;
 }
 
 const STORAGE_KEY = "sched_theme";
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-function getSystemPreference(): ResolvedTheme {
-  if (typeof window === "undefined") return "light";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
+  // Fresh installation defaults to Light
+  const [theme, setThemeState] = useState<Theme>("light");
 
   // Initialize theme from localStorage on client mount
   useEffect(() => {
-    let savedTheme: Theme = "system";
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored === "light" || stored === "dark" || stored === "system") {
-        savedTheme = stored;
+      if (stored === "dark" || stored === "light") {
+        setThemeState(stored);
+        if (stored === "dark") {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+        return;
       }
     } catch {
       // Ignore localStorage errors
     }
 
-    setThemeState(savedTheme);
-    const systemPref = getSystemPreference();
-    const effective: ResolvedTheme = savedTheme === "system" ? systemPref : savedTheme;
-    setResolvedTheme(effective);
-
-    if (effective === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    // Default to Light
+    setThemeState("light");
+    document.documentElement.classList.remove("dark");
   }, []);
 
-  // Handle setting a new theme
+  // Handle setting theme directly
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
     try {
@@ -57,45 +49,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       // Ignore localStorage errors
     }
 
-    const effective: ResolvedTheme =
-      newTheme === "system" ? getSystemPreference() : newTheme;
-    setResolvedTheme(effective);
-
-    if (effective === "dark") {
+    if (newTheme === "dark") {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
   };
 
-  // Listen to system OS/browser preference changes when in 'system' mode
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-
-    const handleChange = (e: MediaQueryListEvent) => {
-      // Only react if user has selected "system"
-      setThemeState((currentTheme) => {
-        if (currentTheme === "system") {
-          const newResolved: ResolvedTheme = e.matches ? "dark" : "light";
-          setResolvedTheme(newResolved);
-          if (newResolved === "dark") {
-            document.documentElement.classList.add("dark");
-          } else {
-            document.documentElement.classList.remove("dark");
-          }
-        }
-        return currentTheme;
-      });
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, []);
+  // Toggle theme between Light and Dark
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
 
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
