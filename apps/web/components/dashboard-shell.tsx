@@ -273,18 +273,80 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   if (errorMessage && !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--bg-canvas)] p-6">
-        <div className="w-full max-w-md rounded-xl border border-[var(--status-danger-border)] bg-[var(--bg-surface)] p-6 sm:p-8 shadow-md text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] mb-4">
-            <span className="font-mono text-lg font-bold">!</span>
+      <div className="flex min-h-screen items-center justify-center bg-canvas p-4 sm:p-6 antialiased">
+        <div className="w-full max-w-md rounded-2xl border border-border-subtle bg-surface p-6 sm:p-8 shadow-xl text-center transition-all animate-in fade-in-50 zoom-in-95 duration-200">
+          {/* Animated Reconnection / Server Icon */}
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 mb-5 relative">
+            <span className="absolute inline-flex h-full w-full rounded-2xl bg-amber-400/20 animate-ping opacity-75" />
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-300">
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
           </div>
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">API Connection Issue</h2>
-          <p className="mt-2 text-xs text-[var(--text-secondary)] leading-relaxed">{errorMessage}</p>
-          <div className="mt-6 flex flex-col sm:flex-row gap-2 justify-center">
-            <Button type="button" onClick={() => void checkAuth()} size="sm">
-              Retry Connection
+
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide uppercase bg-surface-subtle text-text-sub border border-border-subtle mb-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+              Service Status
+            </div>
+            <h2 className="text-lg font-bold text-text-main tracking-tight">
+              API Connection Issue
+            </h2>
+            <p className="text-xs text-text-sub leading-relaxed max-w-xs mx-auto">
+              We couldn&apos;t connect to the Sched API services. Your session data and settings are safely preserved.
+            </p>
+          </div>
+
+          {/* Diagnostic Note */}
+          <div className="mt-4 p-3 rounded-xl bg-surface-subtle border border-border-subtle text-left">
+            <div className="flex items-center justify-between text-[11px] font-mono text-text-muted">
+              <span>Status</span>
+              <span className="font-semibold text-rose-500">503 Unavailable</span>
+            </div>
+            <p className="mt-1 text-[11px] text-text-sub font-mono break-all line-clamp-2">
+              {errorMessage}
+            </p>
+          </div>
+
+          <div className="mt-6 flex flex-col sm:flex-row gap-2.5 justify-center">
+            <Button
+              type="button"
+              onClick={() => void checkAuth()}
+              size="sm"
+              className="rounded-full bg-brand hover:bg-brand-hover text-white font-semibold text-xs px-5 shadow-xs cursor-pointer gap-2 h-9"
+            >
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              <span>Retry Connection</span>
             </Button>
-            <Button asChild variant="outline" size="sm">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="rounded-full border-border-subtle text-text-main hover:bg-surface-subtle font-semibold text-xs px-4 h-9 cursor-pointer"
+            >
               <Link href="/login">Go to Login</Link>
             </Button>
           </div>

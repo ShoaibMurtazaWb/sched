@@ -38,7 +38,7 @@ export function SidePanel({
   const panelRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Detect mobile/tablet vs desktop (matches lg: 1024px breakpoint)
+  // Detect mobile/tablet vs desktop (breakpoint at lg: 1024px)
   useEffect(() => {
     if (typeof window === "undefined") return;
     const media = window.matchMedia("(max-width: 1023px)");
@@ -67,13 +67,12 @@ export function SidePanel({
   }, [isOpen, onClose]);
 
   // Width configuration:
-  // If custom width has Tailwind classes (e.g. "lg:w-[500px] xl:w-[540px]"), use it.
-  // Otherwise default to "lg:w-[480px] xl:w-[540px]".
+  // Desktop default width is 390px (compact/balanced), scaling to 420px on xl+.
+  // Max width is constrained so it never exceeds available viewport.
   const desktopWidthClass = width && width.includes("w-")
     ? width
-    : "lg:w-[480px] xl:w-[540px]";
+    : "lg:w-[390px] xl:w-[420px]";
 
-  // Inline width style if width is a CSS value (e.g., "500px")
   const customWidthStyle = width && !width.includes("w-")
     ? { width }
     : undefined;
@@ -100,24 +99,24 @@ export function SidePanel({
         aria-label={typeof title === "string" ? title : ariaLabel || "Side Panel"}
         style={isOpen ? customWidthStyle : undefined}
         className={`
-          /* Mobile & Tablet Styles */
-          fixed inset-y-0 right-0 z-50 flex flex-col w-full sm:max-w-md md:max-w-lg bg-surface border-l border-border-subtle shadow-2xl transition-[transform,width,opacity,border-color] duration-300 ease-in-out will-change-transform
+          /* Mobile & Tablet Styles: Full slide-over drawer */
+          fixed inset-y-0 right-0 z-50 flex flex-col w-full sm:max-w-md bg-surface border-l border-border-subtle shadow-2xl transition-[transform,opacity] duration-300 ease-in-out will-change-transform
           ${isOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"}
 
-          /* Desktop Responsive In-Flow Styles (physically participates in layout) */
-          lg:static lg:inset-auto lg:top-0 lg:right-auto lg:z-10 lg:shadow-none lg:translate-x-0 lg:opacity-100 lg:h-[calc(100vh-4rem)] sm:lg:h-[calc(100vh-5rem)] lg:sticky sm:lg:top-20 lg:shrink-0
+          /* Desktop Responsive In-Flow Styles: Part of layout, never clipped */
+          lg:static lg:inset-auto lg:top-0 lg:right-auto lg:z-10 lg:shadow-none lg:translate-x-0 lg:opacity-100 lg:h-[calc(100vh-5rem)] lg:sticky lg:top-20 lg:shrink-0 lg:transition-[width,border-color] lg:duration-300 lg:ease-in-out
           ${
             isOpen
-              ? `${desktopWidthClass} lg:border-l lg:border-border-subtle lg:pointer-events-auto`
+              ? `${desktopWidthClass} lg:max-w-[45vw] lg:border-l lg:border-border-subtle lg:pointer-events-auto`
               : "lg:w-0 lg:border-l-0 lg:pointer-events-none lg:overflow-hidden"
           }
           ${className}
         `}
       >
-        {/* Inner container with stable width so internal form/text content doesn't squeeze during 300ms transition */}
+        {/* Inner container with stable fixed width so internal form/text content doesn't squeeze during 300ms transition */}
         <div
           style={customWidthStyle}
-          className={`w-full ${desktopWidthClass} lg:min-w-[480px] xl:lg:min-w-[540px] h-full flex flex-col overflow-hidden bg-surface`}
+          className={`w-full ${desktopWidthClass} lg:w-[390px] xl:w-[420px] h-full flex flex-col overflow-hidden bg-surface`}
         >
           {/* Header Slot: customHeader OR standard title, subtitle, custom actions, and close button */}
           {customHeader ? (
@@ -126,38 +125,38 @@ export function SidePanel({
             </div>
           ) : (title || headerContent || headerActions) ? (
             <div className="border-b border-border-subtle bg-surface sticky top-0 z-10 shrink-0">
-              <div className="flex items-center justify-between px-6 py-4">
+              <div className="flex items-center justify-between px-5 py-3.5">
                 <div className="min-w-0 flex-1 pr-3">
                   {typeof title === "string" ? (
-                    <h2 className="text-xs font-semibold uppercase tracking-wider text-text-sub truncate">
+                    <h2 className="text-[11px] font-bold uppercase tracking-wider text-text-muted truncate">
                       {title}
                     </h2>
                   ) : (
                     title
                   )}
                   {subtitle && (
-                    <p className="text-xs text-text-muted mt-0.5 truncate font-normal">
+                    <p className="text-xs text-text-sub mt-0.5 truncate font-normal">
                       {subtitle}
                     </p>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   {headerActions}
                   <button
                     type="button"
                     onClick={onClose}
                     aria-label="Close panel"
                     title="Close"
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-text-sub hover:text-text-main hover:bg-surface-subtle active:scale-95 transition-all cursor-pointer"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted hover:text-text-main hover:bg-surface-subtle active:scale-95 transition-all cursor-pointer"
                   >
-                    <X className="h-4.5 w-4.5" />
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
               </div>
 
               {headerContent && (
-                <div className="px-6 pb-3">
+                <div className="px-5 pb-3">
                   {headerContent}
                 </div>
               )}
@@ -166,32 +165,32 @@ export function SidePanel({
 
           {/* Fallback close button if no header is provided */}
           {!customHeader && !title && !headerContent && !headerActions && (
-            <div className="absolute top-4 right-4 z-20">
+            <div className="absolute top-3.5 right-3.5 z-20">
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Close panel"
                 title="Close"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-text-sub hover:text-text-main hover:bg-surface-subtle active:scale-95 transition-all cursor-pointer bg-surface/80 backdrop-blur-xs border border-border-subtle shadow-xs"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-text-sub hover:text-text-main hover:bg-surface-subtle active:scale-95 transition-all cursor-pointer bg-surface/90 backdrop-blur-xs border border-border-subtle shadow-xs"
               >
-                <X className="h-4.5 w-4.5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
           )}
 
           {/* Isolated Body Scroll Container:
-              - overscroll-contain prevents scroll chaining to the parent page
+              - overscroll-contain prevents scroll chaining to parent page
               - overflow-y-auto ensures smooth independent scrolling for long forms
           */}
           <div
-            className={`flex-1 overflow-y-auto overscroll-contain px-6 py-5 space-y-6 ${bodyClassName}`}
+            className={`flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-4 ${bodyClassName}`}
           >
             {children}
           </div>
 
           {/* Sticky Footer Slot */}
           {footer && (
-            <div className="px-6 py-4 border-t border-border-subtle bg-surface sticky bottom-0 z-10 flex items-center justify-between gap-3 shrink-0">
+            <div className="px-5 py-3.5 border-t border-border-subtle bg-surface sticky bottom-0 z-10 flex items-center justify-between gap-3 shrink-0">
               {footer}
             </div>
           )}
