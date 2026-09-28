@@ -103,12 +103,12 @@ export function SidePanel({
           fixed inset-y-0 right-0 z-50 flex flex-col w-full sm:max-w-md bg-surface border-l border-border-subtle shadow-2xl transition-[transform,opacity] duration-300 ease-in-out will-change-transform
           ${isOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"}
 
-          /* Desktop Responsive In-Flow Styles: Part of layout, never clipped */
-          lg:static lg:inset-auto lg:top-0 lg:right-auto lg:z-10 lg:shadow-none lg:translate-x-0 lg:opacity-100 lg:h-[calc(100vh-5rem)] lg:sticky lg:top-20 lg:shrink-0 lg:transition-[width,border-color] lg:duration-300 lg:ease-in-out
+          /* Desktop Responsive In-Flow Styles: Part of layout, separate rounded surface without borders */
+          lg:static lg:inset-auto lg:top-0 lg:right-auto lg:z-10 lg:translate-x-0 lg:opacity-100 lg:h-[calc(100vh-6rem)] lg:sticky lg:top-24 lg:shrink-0 lg:transition-[width,margin,opacity] lg:duration-300 lg:ease-in-out
           ${
             isOpen
-              ? `${desktopWidthClass} lg:max-w-[45vw] lg:border-l lg:border-border-subtle lg:pointer-events-auto`
-              : "lg:w-0 lg:border-l-0 lg:pointer-events-none lg:overflow-hidden"
+              ? `${desktopWidthClass} lg:ml-4 lg:max-w-[45vw] lg:rounded-2xl lg:shadow-sm lg:border-0 lg:pointer-events-auto`
+              : "lg:w-0 lg:ml-0 lg:border-0 lg:pointer-events-none lg:overflow-hidden"
           }
           ${className}
         `}
@@ -116,7 +116,7 @@ export function SidePanel({
         {/* Inner container with stable fixed width so internal form/text content doesn't squeeze during 300ms transition */}
         <div
           style={customWidthStyle}
-          className={`w-full ${desktopWidthClass} lg:w-[390px] xl:w-[420px] h-full flex flex-col overflow-hidden bg-surface`}
+          className={`w-full ${desktopWidthClass} lg:w-[390px] xl:w-[420px] h-full flex flex-col overflow-hidden bg-surface lg:rounded-2xl`}
         >
           {/* Header Slot: customHeader OR standard title, subtitle, custom actions, and close button */}
           {customHeader ? (

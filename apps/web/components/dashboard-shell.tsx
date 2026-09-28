@@ -178,19 +178,26 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Minute-level clock updates
+  // Minute-level clock updates with GMT offset matching design reference
   useEffect(() => {
     if (!user?.timezone) return;
 
     function updateTime() {
       try {
-        const formatter = new Intl.DateTimeFormat("en-GB", {
+        const now = new Date();
+        const timePart = new Intl.DateTimeFormat("en-GB", {
           timeZone: user?.timezone,
           hour: "2-digit",
           minute: "2-digit",
-          timeZoneName: "short",
-        });
-        setCurrentTime(formatter.format(new Date()));
+        }).format(now);
+
+        const parts = new Intl.DateTimeFormat("en-US", {
+          timeZone: user?.timezone,
+          timeZoneName: "shortOffset",
+        }).formatToParts(now);
+        const offsetPart = parts.find((p) => p.type === "timeZoneName")?.value || "";
+
+        setCurrentTime(`${timePart} ${offsetPart}`.trim());
       } catch {
         setCurrentTime("");
       }
@@ -468,183 +475,168 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       {/* Main App Container */}
       <div className="flex flex-1 min-h-screen md:min-h-0">
 
-        {/* Desktop Sidebar Navigation (Hidden on Mobile) */}
-        <aside
-          className={`hidden md:flex flex-col justify-between border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] transition-[width] duration-500 ease-in-out md:sticky md:top-0 md:h-screen ${
-            isCollapsed ? "md:w-[84px]" : "md:w-[260px]"
-          }`}
-        >
-          {/* Floating Expand Button on Right Border (When Collapsed) */}
-          {isCollapsed && (
-            <button
-              type="button"
-              onClick={toggleSidebar}
-              className="hidden md:flex absolute -right-4 top-[20px] z-50 h-8 w-8 items-center justify-center rounded-full border border-neutral-200 bg-white shadow-md text-neutral-900 hover:bg-neutral-50 hover:scale-110 active:scale-95 transition-all cursor-pointer"
-              title="Expand sidebar"
-              aria-label="Expand sidebar"
-            >
-              <ChevronsRight className="h-4 w-4 stroke-[2.5] text-neutral-800" />
-            </button>
-          )}
+        {/* Desktop Sidebar Navigation Container */}
+        <div className="hidden md:block relative shrink-0">
+          <aside
+            className={`flex flex-col justify-between bg-surface transition-[width] duration-300 ease-in-out md:sticky md:top-0 md:h-screen ${
+              isCollapsed ? "md:w-[88px]" : "md:w-[260px]"
+            }`}
+          >
+            {/* Top Section: Logo & Navigation */}
+            <div className={`flex flex-col flex-1 min-h-0 overflow-y-auto ${isCollapsed ? "px-3" : "px-5"} py-6 transition-[padding] duration-300`}>
+              {/* Logo Row: Centered when collapsed, left aligned when expanded */}
+              <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-start"} mb-6 px-1 min-h-[36px]`}>
+                <Link href="/dashboard" className="flex items-center gap-3 group shrink-0" title="Sched">
+                  <Logo className="h-8 w-8 transition-transform duration-150 group-hover:scale-105 shrink-0" />
+                  {!isCollapsed && (
+                    <span className="font-bold tracking-tight text-text-main text-2xl whitespace-nowrap overflow-hidden transition-all duration-300">
+                      Sched
+                    </span>
+                  )}
+                </Link>
+              </div>
 
-          {/* Top Section: Logo & Toggle Button + Create CTA */}
-          <div className={`flex flex-col flex-1 min-h-0 overflow-y-auto ${isCollapsed ? "px-3" : "px-5"} py-5 transition-[padding] duration-500`}>
-            {/* Logo Row + Collapse Button */}
-            <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"} mb-5 px-1 min-h-[36px]`}>
-              <Link href="/dashboard" className="flex items-center gap-2.5 group shrink-0">
-                <Logo className="h-8 w-8 transition-transform duration-150 group-hover:scale-105 shrink-0" />
-                {!isCollapsed && (
-                  <span className="font-bold tracking-tight text-black text-2xl whitespace-nowrap overflow-hidden transition-all duration-300">
-                    Sched
-                  </span>
-                )}
-              </Link>
-
-              {/* Desktop Collapse Button (When Expanded) */}
-              {!isCollapsed && (
-                <button
-                  type="button"
-                  onClick={toggleSidebar}
-                  className="hidden md:flex h-8 w-8 items-center justify-center rounded-full text-black hover:bg-neutral-100 transition-colors cursor-pointer shrink-0"
-                  title="Collapse sidebar"
-                  aria-label="Collapse sidebar"
-                >
-                  <ChevronsLeft className="h-4.5 w-4.5 stroke-[2.5]" />
-                </button>
-              )}
-            </div>
-
-            {/* "+ Create" Action Button (Desktop Only) */}
-            <div className="mb-5">
-              {isCollapsed ? (
-                <div className="flex justify-center">
+              {/* "+ Create" Action Button */}
+              <div className="mb-6">
+                {isCollapsed ? (
+                  <div className="flex justify-center">
+                    <Button
+                      asChild
+                      size="icon"
+                      className="h-12 w-12 rounded-2xl bg-brand hover:bg-brand-hover text-white shadow-2xs transition-all cursor-pointer"
+                      title="Create Event Type"
+                    >
+                      <Link href="/dashboard/event-types/new">
+                        <Plus className="h-5 w-5 stroke-[2.5]" />
+                      </Link>
+                    </Button>
+                  </div>
+                ) : (
                   <Button
                     asChild
-                    size="icon"
-                    className="h-10 w-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-2xs transition-all cursor-pointer"
-                    title="Create Event Type"
+                    className="w-full justify-center gap-2.5 h-11 rounded-2xl bg-brand hover:bg-brand-hover text-white shadow-xs font-semibold text-sm transition-all cursor-pointer"
                   >
                     <Link href="/dashboard/event-types/new">
-                      <Plus className="h-5 w-5 stroke-[2.5]" />
+                      <Plus className="h-4.5 w-4.5 stroke-[2.5]" />
+                      <span className="whitespace-nowrap">Create</span>
                     </Link>
                   </Button>
-                </div>
-              ) : (
-                <Button
-                  asChild
-                  className="w-full justify-center gap-2 h-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-xs font-semibold text-sm transition-all cursor-pointer"
-                >
-                  <Link href="/dashboard/event-types/new">
-                    <Plus className="h-4 w-4 stroke-[2.5]" />
-                    <span className="whitespace-nowrap">Create</span>
-                  </Link>
-                </Button>
-              )}
+                )}
+              </div>
+
+              {/* Main Navigation List */}
+              <nav className="space-y-2">
+                {mainNavItems.map((item) => {
+                  const Icon = item.icon;
+                  if (isCollapsed) {
+                    return (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        className={`group flex items-center justify-center w-12 h-12 mx-auto rounded-2xl transition-all duration-150 cursor-pointer ${
+                          item.active
+                            ? "bg-blue-50 text-brand font-bold dark:bg-blue-950/50 shadow-2xs"
+                            : "text-text-sub hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+                        }`}
+                        title={item.label}
+                      >
+                        <Icon className={`h-5 w-5 shrink-0 transition-transform duration-150 group-hover:scale-110 ${item.active ? "text-brand stroke-[2.2]" : "text-text-muted group-hover:text-brand stroke-[1.8]"}`} />
+                      </Link>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      className={`group flex items-center gap-3.5 rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-150 ${
+                        item.active
+                          ? "bg-blue-50 text-brand font-bold dark:bg-blue-950/50 shadow-2xs"
+                          : "text-text-sub hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+                      }`}
+                    >
+                      <Icon
+                        className={`h-5 w-5 shrink-0 transition-colors ${
+                          item.active ? "text-brand stroke-[2.2]" : "text-text-muted group-hover:text-brand stroke-[1.8]"
+                        }`}
+                      />
+                      <span className={`whitespace-nowrap overflow-hidden text-ellipsis ${item.active ? "text-brand font-bold" : "text-text-main"}`}>
+                        {item.label}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </nav>
             </div>
 
-            {/* Main Navigation List */}
-            <nav className="space-y-1">
-              {mainNavItems.map((item) => {
-                const Icon = item.icon;
-                if (isCollapsed) {
+            {/* Bottom Section: Analytics & Settings (No separator border) */}
+            <div className={`mt-auto shrink-0 ${isCollapsed ? "px-3" : "px-5"} pt-3 pb-5 transition-[padding] duration-300`}>
+              <nav className="space-y-2">
+                {secondaryNavItems.map((item) => {
+                  const Icon = item.icon;
+                  if (isCollapsed) {
+                    return (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        className={`group flex items-center justify-center w-12 h-12 mx-auto rounded-2xl transition-all duration-150 cursor-pointer ${
+                          item.active
+                            ? "bg-blue-50 text-brand font-bold dark:bg-blue-950/50 shadow-2xs"
+                            : "text-text-sub hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+                        }`}
+                        title={item.label}
+                      >
+                        <Icon className={`h-5 w-5 shrink-0 transition-transform duration-150 group-hover:scale-110 ${item.active ? "text-brand stroke-[2.2]" : "text-text-muted group-hover:text-brand stroke-[1.8]"}`} />
+                      </Link>
+                    );
+                  }
+
                   return (
                     <Link
                       key={item.label}
                       href={item.href}
-                      className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl text-center transition-all ${
+                      className={`group flex items-center gap-3.5 rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-150 ${
                         item.active
-                          ? "bg-brand/10 text-brand font-semibold shadow-2xs"
-                          : "text-text-sub hover:bg-surface-subtle hover:text-brand"
+                          ? "bg-blue-50 text-brand font-bold dark:bg-blue-950/50 shadow-2xs"
+                          : "text-text-sub hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
                       }`}
-                      title={item.label}
                     >
-                      <Icon className={`h-5 w-5 mb-1 shrink-0 ${item.active ? "text-brand" : "text-text-muted"}`} />
-                      <span className={`text-[10px] leading-tight line-clamp-1 font-semibold ${item.active ? "text-brand font-bold" : "text-text-sub"}`}>
+                      <Icon className={`h-5 w-5 shrink-0 transition-colors ${item.active ? "text-brand stroke-[2.2]" : "text-text-muted group-hover:text-brand stroke-[1.8]"}`} />
+                      <span className={`whitespace-nowrap overflow-hidden text-ellipsis ${item.active ? "text-brand font-bold" : "text-text-main"}`}>
                         {item.label}
                       </span>
                     </Link>
                   );
-                }
+                })}
+              </nav>
+            </div>
+          </aside>
 
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-[background-color,color] duration-150 ${
-                      item.active
-                        ? "bg-brand/10 text-brand font-semibold"
-                        : "text-text-sub hover:bg-surface-subtle hover:text-brand"
-                    }`}
-                  >
-                    <Icon
-                      className={`h-4 w-4 shrink-0 ${
-                        item.active ? "text-brand" : "text-text-muted"
-                      }`}
-                    />
-                    <span className={`whitespace-nowrap overflow-hidden text-ellipsis ${item.active ? "text-brand font-bold" : "text-text-main"}`}>
-                      {item.label}
-                    </span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-
-          {/* Bottom Section: Analytics & Settings */}
-          <div className={`mt-auto shrink-0 border-t border-border-subtle ${isCollapsed ? "px-3" : "px-5"} pt-3 pb-4 transition-[padding] duration-500`}>
-            <nav className="space-y-1">
-              {secondaryNavItems.map((item) => {
-                const Icon = item.icon;
-                if (isCollapsed) {
-                  return (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl text-center transition-all ${
-                        item.active
-                          ? "bg-brand/10 text-brand font-semibold shadow-2xs"
-                          : "text-text-sub hover:bg-surface-subtle hover:text-brand"
-                      }`}
-                      title={item.label}
-                    >
-                      <Icon className={`h-5 w-5 mb-1 shrink-0 ${item.active ? "text-brand" : "text-text-muted"}`} />
-                      <span className={`text-[10px] leading-tight line-clamp-1 font-semibold ${item.active ? "text-brand font-bold" : "text-text-sub"}`}>
-                        {item.label}
-                      </span>
-                    </Link>
-                  );
-                }
-
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-colors ${
-                      item.active
-                        ? "bg-brand/10 text-brand font-semibold"
-                        : "text-text-sub hover:bg-surface-subtle hover:text-brand"
-                    }`}
-                  >
-                    <Icon className={`h-4 w-4 shrink-0 ${item.active ? "text-brand" : "text-text-muted"}`} />
-                    <span className={`whitespace-nowrap overflow-hidden text-ellipsis ${item.active ? "text-brand font-bold" : "text-text-main"}`}>
-                      {item.label}
-                    </span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-        </aside>
+          {/* Floating Collapse / Expand Button Outside Sidebar Container */}
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className="absolute -right-3.5 top-6 z-30 flex h-7 w-7 items-center justify-center rounded-full bg-transparent hover:bg-blue-50 text-text-sub hover:text-brand dark:hover:bg-blue-950/50 transition-colors cursor-pointer outline-none focus:outline-none border-0"
+            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isCollapsed ? (
+              <ChevronsRight className="h-4 w-4 stroke-[2.2]" />
+            ) : (
+              <ChevronsLeft className="h-4 w-4 stroke-[2.2]" />
+            )}
+          </button>
+        </div>
 
         {/* Main Content Area */}
         <div className="flex-1 min-w-0 flex flex-col min-h-screen bg-canvas">
           {/* Mobile Header Bar (< md) - Compact 56px, left hamburger + Sched brand, right theme switcher & avatar */}
-          <header className="md:hidden sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-border-subtle bg-surface px-4 shadow-2xs shrink-0">
+          <header className="md:hidden sticky top-0 z-40 flex h-14 w-full items-center justify-between bg-surface px-4 shadow-2xs shrink-0">
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(true)}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle bg-surface text-text-main hover:bg-surface-subtle active:bg-surface-muted transition-colors cursor-pointer"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface text-text-main hover:bg-blue-50/70 hover:text-brand transition-colors cursor-pointer"
                 aria-label="Open navigation menu"
               >
                 <Menu className="h-5 w-5" />
@@ -749,7 +741,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </header>
 
           {/* Top Bar with User Profile Dropdown (Full Width, Header with Sched design tokens) */}
-          <header className="hidden md:flex h-20 w-full items-center justify-end bg-surface border-b border-border-subtle px-8 sm:px-12 md:px-16 gap-4">
+          <header className="hidden md:flex h-15 w-full items-center justify-end bg-surface px-6 sm:px-8 gap-4">
             <ThemeSwitcher align="right" />
 
             {/* User Profile Dropdown Menu in Top Navbar */}
@@ -757,7 +749,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => setIsDropdownOpen((prev) => !prev)}
-                className="flex items-center gap-2.5 rounded-full p-1.5 pl-2.5 hover:bg-surface-subtle border border-transparent hover:border-border-subtle transition-all cursor-pointer"
+                className={`flex items-center gap-2 rounded-full p-1 pl-1.5 transition-all cursor-pointer outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 border-0 ${
+                  isDropdownOpen
+                    ? "bg-blue-50/80 text-brand"
+                    : "hover:bg-blue-50/60 dark:hover:bg-blue-950/30"
+                }`}
                 aria-expanded={isDropdownOpen}
                 aria-label="User account menu"
               >
@@ -772,17 +768,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-surface" />
                 </div>
                 <ChevronDown
-                  className={`h-4 w-4 text-text-sub transition-transform duration-150 ${
-                    isDropdownOpen ? "rotate-180" : ""
+                  className={`h-4 w-4 text-text-sub transition-transform duration-200 ${
+                    isDropdownOpen ? "rotate-180 text-brand" : ""
                   }`}
                 />
               </button>
 
-              {/* User Dropdown Menu Card */}
+              {/* User Dropdown Menu Card Matching Screenshot 5 */}
               {isDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-72 rounded-xl border border-border-subtle bg-surface p-2 shadow-xl z-50 animate-in fade-in-0 zoom-in-95 duration-150">
-                  <div className="flex items-center gap-3 p-2.5 rounded-lg bg-surface-subtle border border-border-subtle mb-1">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white font-bold text-xs select-none shadow-2xs overflow-hidden">
+                <div className="absolute right-0 mt-2 w-76 rounded-2xl border border-black/5 dark:border-white/10 bg-surface p-2.5 shadow-2xl z-50 animate-in fade-in-0 slide-in-from-top-2 zoom-in-98 duration-150 ease-out">
+                  {/* User Profile Header Box */}
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-subtle mb-1.5">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand text-white font-bold text-sm select-none shadow-2xs overflow-hidden ring-2 ring-surface">
                       {user.avatarUrl ? (
                         <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
                       ) : (
@@ -790,57 +787,61 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-text-main truncate">{user.name}</p>
-                      <p className="text-[11px] font-mono text-text-sub truncate">@{user.username}</p>
-                      <p className="text-[10px] text-text-muted truncate">{user.email}</p>
+                      <p className="text-sm font-bold text-text-main truncate leading-snug">{user.name}</p>
+                      <p className="text-xs font-mono text-text-sub truncate leading-tight">@{user.username}</p>
+                      <p className="text-[11px] text-text-muted truncate mt-0.5">{user.email}</p>
                     </div>
                   </div>
 
+                  {/* Timezone & Time Badge */}
                   {user.timezone && (
-                    <div className="px-2.5 py-1.5 mb-1 flex items-center justify-between text-[11px] font-mono text-text-sub bg-surface-subtle rounded-md">
-                      <span className="flex items-center gap-1.5 truncate">
-                        <Globe className="h-3 w-3 text-text-muted shrink-0" />
+                    <div className="px-3.5 py-2 mb-2 flex items-center justify-between text-xs font-mono text-text-sub bg-surface-subtle rounded-xl">
+                      <span className="flex items-center gap-2 truncate">
+                        <Globe className="h-3.5 w-3.5 text-text-muted shrink-0" />
                         <span className="truncate">{user.timezone}</span>
                       </span>
                       {currentTime && (
-                        <span className="text-text-main font-semibold tabular-nums shrink-0">{currentTime}</span>
+                        <span className="text-text-main font-bold tabular-nums shrink-0">{currentTime}</span>
                       )}
                     </div>
                   )}
 
+                  {/* Public Booking Profile Link */}
                   <Link
                     href={`/public/${user.username}`}
                     target="_blank"
                     onClick={() => setIsDropdownOpen(false)}
-                    className="flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-semibold text-text-main hover:bg-surface-subtle transition-colors"
+                    className="flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-semibold text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30 transition-colors"
                   >
                     <div className="flex items-center gap-2.5">
-                      <UserIcon className="h-3.5 w-3.5 text-text-main" />
+                      <UserIcon className="h-4 w-4 text-text-sub" />
                       <span>Public Booking Profile</span>
                     </div>
-                    <ExternalLink className="h-3 w-3 text-text-muted" />
+                    <ExternalLink className="h-3.5 w-3.5 text-text-muted" />
                   </Link>
 
+                  {/* Account Settings Link */}
                   <Link
                     href="/dashboard/settings"
                     onClick={() => setIsDropdownOpen(false)}
-                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-text-main hover:bg-surface-subtle transition-colors"
+                    className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold text-text-main hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30 transition-colors"
                   >
-                    <Settings className="h-3.5 w-3.5 text-text-main" />
+                    <Settings className="h-4 w-4 text-text-sub" />
                     <span>Account Settings</span>
                   </Link>
 
-                  <div className="my-1 border-t border-border-subtle" />
+                  <div className="my-1.5 border-t border-border-subtle" />
 
+                  {/* Sign out */}
                   <button
                     type="button"
                     onClick={() => {
                       setIsDropdownOpen(false);
                       void logout();
                     }}
-                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
                   >
-                    <LogOut className="h-3.5 w-3.5" />
+                    <LogOut className="h-4 w-4 text-rose-600" />
                     <span>Sign out</span>
                   </button>
                 </div>

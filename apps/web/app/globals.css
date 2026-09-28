@@ -25,14 +25,14 @@
   color-scheme: light;
 
   /* Sched Global Design Tokens (LIGHT) */
-  --canvas: #f8f9fa;
+  --canvas: #f6f8fa;
   --surface: #ffffff;
-  --surface-subtle: #f1f5f9;
-  --surface-muted: #e2e8f0;
+  --surface-subtle: #ffffff;
+  --surface-muted: #f1f5f9;
   --brand: #0069ff;
   --brand-hover: #0056d6;
-  --border-subtle: #e2e8f0;
-  --border-strong: #cbd5e1;
+  --border-subtle: #f1f5f9;
+  --border-strong: #e2e8f0;
   --text-main: #0f172a;
   --text-sub: #475569;
   --text-muted: #94a3b8;
