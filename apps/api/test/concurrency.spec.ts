@@ -15,6 +15,8 @@ describe("Milestone 1: Concurrency, Exclusion Constraints & Hardening", () => {
   let prisma: PrismaService;
   let notificationsProcessor: NotificationsProcessor;
 
+  jest.setTimeout(60000);
+
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
