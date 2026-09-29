@@ -322,9 +322,9 @@ export default function BookingsPage() {
   }, [bookings, currentUser?.timezone]);
 
   return (
-    <div className="flex w-full h-full min-h-0 items-stretch overflow-hidden p-3.5 sm:p-5 lg:p-6">
+    <div className="flex w-full h-full min-h-0 items-stretch overflow-hidden px-2 sm:px-3 lg:px-4 pb-2 sm:pb-3 lg:pb-4 pt-0">
       {/* Main Content: subtle rounded surface, horizontally shrinks when BookingDetailDrawer opens */}
-      <div className="flex-1 min-w-0 h-full min-h-0 flex flex-col transition-all duration-300 ease-in-out bg-surface-subtle rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 shadow-xs overflow-hidden">
+      <div className="flex-1 min-w-0 h-full min-h-0 flex flex-col transition-all duration-300 ease-in-out bg-surface-subtle rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-7 shadow-xs overflow-hidden">
         {/* Fixed Header & Tabs Section */}
         <div className="shrink-0 space-y-4 pb-2">
           {/* Page Header */}

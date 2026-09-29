@@ -78,7 +78,7 @@ export default function AnalyticsPage() {
   const hasCompletedMeetings = (data?.summary.confirmedCount ?? 0) > 0;
 
   return (
-    <div className="h-full min-h-0 overflow-y-auto px-4 sm:px-6 md:px-10 lg:px-14 py-4 sm:py-6 md:py-8 space-y-6">
+    <div className="h-full min-h-0 overflow-y-auto px-2 sm:px-4 md:px-6 lg:px-8 pb-4 sm:pb-6 md:pb-8 pt-0 space-y-6">
       {/* Page Header with Timeframe Range Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
         <div>

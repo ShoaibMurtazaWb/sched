@@ -295,9 +295,9 @@ function IntegrationsContent() {
   }, [isConnected, selectedCalendarId, savedSelectedCalendarId, conflictCalendarIds, savedConflictCalendarIds]);
 
   return (
-    <div className="h-full min-h-0 overflow-y-auto px-3.5 sm:px-5 lg:px-6 py-4 sm:py-6 w-full space-y-6">
+    <div className="h-full min-h-0 overflow-y-auto px-2 sm:px-3 lg:px-4 pb-4 sm:pb-6 pt-0 w-full space-y-6">
       {/* Subtle Gray Surface Container with Rounded Corners */}
-      <div className="bg-surface-subtle rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 space-y-6 shadow-xs">
+      <div className="bg-surface-subtle rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-7 space-y-6 shadow-xs">
         {/* Page Header */}
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text-main">

@@ -378,8 +378,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="h-full min-h-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 w-full space-y-6 pb-12">
-      <div className="bg-surface rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 space-y-6 shadow-xs">
+    <div className="h-full min-h-0 overflow-y-auto px-2 sm:px-4 lg:px-6 pb-12 pt-0 w-full space-y-6">
+      <div className="bg-surface rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-7 space-y-6 shadow-xs">
         {/* Header */}
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text-primary">

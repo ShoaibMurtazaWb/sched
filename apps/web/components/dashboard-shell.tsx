@@ -450,8 +450,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={`group relative flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer ${
                     item.active
-                      ? "bg-brand/10 text-brand font-semibold"
-                      : "text-text-sub hover:bg-surface-subtle hover:text-text-main"
+                      ? "bg-blue-100 text-brand font-bold dark:bg-blue-900/60"
+                      : "text-text-sub hover:bg-blue-100/60 hover:text-brand dark:hover:bg-blue-900/35"
                   }`}
                 >
                   {item.active && (
@@ -482,42 +482,42 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               isCollapsed ? "md:w-[88px]" : "md:w-[260px]"
             }`}
           >
-            {/* Top Section: Logo & Navigation */}
-            <div className={`flex flex-col flex-1 min-h-0 overflow-y-auto ${isCollapsed ? "px-3" : "px-5"} py-6 transition-[padding] duration-300`}>
-              {/* Logo Row: Centered when collapsed, left aligned when expanded */}
-              <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-start"} mb-6 px-1 min-h-[36px]`}>
-                <Link href="/dashboard" className="flex items-center gap-3 group shrink-0" title="Sched">
-                  <Logo className="h-8 w-8 transition-transform duration-150 group-hover:scale-105 shrink-0" />
-                  {!isCollapsed && (
-                    <span className="font-bold tracking-tight text-text-main text-2xl whitespace-nowrap overflow-hidden transition-all duration-300">
-                      Sched
-                    </span>
-                  )}
-                </Link>
-              </div>
+            {/* Top Logo Header Row: Exactly matches Desktop Header height (h-[72px]) for horizontal alignment */}
+            <div className={`h-[72px] flex items-center shrink-0 ${isCollapsed ? "justify-center px-3" : "px-5"} transition-[padding] duration-300`}>
+              <Link href="/dashboard" className="flex items-center gap-3 group shrink-0 px-1" title="Sched">
+                <Logo className="h-8 w-8 transition-transform duration-150 group-hover:scale-105 shrink-0" />
+                {!isCollapsed && (
+                  <span className="font-bold tracking-tight text-text-main text-2xl whitespace-nowrap overflow-hidden transition-all duration-300">
+                    Sched
+                  </span>
+                )}
+              </Link>
+            </div>
 
-              {/* "+ Create" Action Button */}
-              <div className="mb-6">
+            {/* Scrollable Navigation Section */}
+            <div className={`flex flex-col flex-1 min-h-0 overflow-y-auto ${isCollapsed ? "px-3" : "px-5"} pt-1 pb-4 transition-[padding] duration-300`}>
+              {/* "+ Create" Action Button: Compact size with circular background */}
+              <div className="mb-4">
                 {isCollapsed ? (
                   <div className="flex justify-center">
                     <Button
                       asChild
                       size="icon"
-                      className="h-12 w-12 rounded-2xl bg-brand hover:bg-brand-hover text-white shadow-2xs transition-all cursor-pointer"
+                      className="h-9 w-9 rounded-full bg-brand hover:bg-brand-hover text-white shadow-2xs transition-all cursor-pointer"
                       title="Create Event Type"
                     >
                       <Link href="/dashboard/event-types/new">
-                        <Plus className="h-5 w-5 stroke-[2.5]" />
+                        <Plus className="h-4 w-4 stroke-[2.5]" />
                       </Link>
                     </Button>
                   </div>
                 ) : (
                   <Button
                     asChild
-                    className="w-full justify-center gap-2.5 h-11 rounded-2xl bg-brand hover:bg-brand-hover text-white shadow-xs font-semibold text-sm transition-all cursor-pointer"
+                    className="w-full justify-center gap-2 h-9 rounded-full bg-brand hover:bg-brand-hover text-white shadow-xs font-semibold text-xs transition-all cursor-pointer"
                   >
                     <Link href="/dashboard/event-types/new">
-                      <Plus className="h-4.5 w-4.5 stroke-[2.5]" />
+                      <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
                       <span className="whitespace-nowrap">Create</span>
                     </Link>
                   </Button>
@@ -525,7 +525,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </div>
 
               {/* Main Navigation List */}
-              <nav className="space-y-2">
+              <nav className="space-y-1.5">
                 {mainNavItems.map((item) => {
                   const Icon = item.icon;
                   if (isCollapsed) {
@@ -533,14 +533,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       <Link
                         key={item.label}
                         href={item.href}
-                        className={`group flex items-center justify-center w-12 h-12 mx-auto rounded-2xl transition-all duration-150 cursor-pointer ${
+                        className={`group flex items-center justify-center w-10 h-10 mx-auto rounded-xl transition-all duration-150 cursor-pointer ${
                           item.active
-                            ? "bg-blue-50 text-brand font-bold dark:bg-blue-950/50 shadow-2xs"
-                            : "text-text-sub hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+                            ? "bg-blue-100 text-brand font-bold dark:bg-blue-900/60 shadow-2xs"
+                            : "text-text-sub hover:bg-blue-100/60 hover:text-brand dark:hover:bg-blue-900/35"
                         }`}
                         title={item.label}
                       >
-                        <Icon className={`h-5 w-5 shrink-0 transition-transform duration-150 group-hover:scale-110 ${item.active ? "text-brand stroke-[2.2]" : "text-text-muted group-hover:text-brand stroke-[1.8]"}`} />
+                        <Icon className={`h-4.5 w-4.5 shrink-0 transition-transform duration-150 group-hover:scale-110 ${item.active ? "text-brand stroke-[2.2]" : "text-text-muted group-hover:text-brand stroke-[1.8]"}`} />
                       </Link>
                     );
                   }
@@ -549,14 +549,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={item.label}
                       href={item.href}
-                      className={`group flex items-center gap-3.5 rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-150 ${
+                      className={`group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all duration-150 ${
                         item.active
-                          ? "bg-blue-50 text-brand font-bold dark:bg-blue-950/50 shadow-2xs"
-                          : "text-text-sub hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+                          ? "bg-blue-100 text-brand font-bold dark:bg-blue-900/60 shadow-2xs"
+                          : "text-text-sub hover:bg-blue-100/60 hover:text-brand dark:hover:bg-blue-900/35"
                       }`}
                     >
                       <Icon
-                        className={`h-5 w-5 shrink-0 transition-colors ${
+                        className={`h-4.5 w-4.5 shrink-0 transition-colors ${
                           item.active ? "text-brand stroke-[2.2]" : "text-text-muted group-hover:text-brand stroke-[1.8]"
                         }`}
                       />
@@ -571,7 +571,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
             {/* Bottom Section: Analytics & Settings (No separator border) */}
             <div className={`mt-auto shrink-0 ${isCollapsed ? "px-3" : "px-5"} pt-3 pb-5 transition-[padding] duration-300`}>
-              <nav className="space-y-2">
+              <nav className="space-y-1.5">
                 {secondaryNavItems.map((item) => {
                   const Icon = item.icon;
                   if (isCollapsed) {
@@ -579,14 +579,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       <Link
                         key={item.label}
                         href={item.href}
-                        className={`group flex items-center justify-center w-12 h-12 mx-auto rounded-2xl transition-all duration-150 cursor-pointer ${
+                        className={`group flex items-center justify-center w-10 h-10 mx-auto rounded-xl transition-all duration-150 cursor-pointer ${
                           item.active
-                            ? "bg-blue-50 text-brand font-bold dark:bg-blue-950/50 shadow-2xs"
-                            : "text-text-sub hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+                            ? "bg-blue-100 text-brand font-bold dark:bg-blue-900/60 shadow-2xs"
+                            : "text-text-sub hover:bg-blue-100/60 hover:text-brand dark:hover:bg-blue-900/35"
                         }`}
                         title={item.label}
                       >
-                        <Icon className={`h-5 w-5 shrink-0 transition-transform duration-150 group-hover:scale-110 ${item.active ? "text-brand stroke-[2.2]" : "text-text-muted group-hover:text-brand stroke-[1.8]"}`} />
+                        <Icon className={`h-4.5 w-4.5 shrink-0 transition-transform duration-150 group-hover:scale-110 ${item.active ? "text-brand stroke-[2.2]" : "text-text-muted group-hover:text-brand stroke-[1.8]"}`} />
                       </Link>
                     );
                   }
@@ -595,13 +595,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={item.label}
                       href={item.href}
-                      className={`group flex items-center gap-3.5 rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-150 ${
+                      className={`group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all duration-150 ${
                         item.active
-                          ? "bg-blue-50 text-brand font-bold dark:bg-blue-950/50 shadow-2xs"
-                          : "text-text-sub hover:bg-blue-50/70 hover:text-brand dark:hover:bg-blue-950/30"
+                          ? "bg-blue-100 text-brand font-bold dark:bg-blue-900/60 shadow-2xs"
+                          : "text-text-sub hover:bg-blue-100/60 hover:text-brand dark:hover:bg-blue-900/35"
                       }`}
                     >
-                      <Icon className={`h-5 w-5 shrink-0 transition-colors ${item.active ? "text-brand stroke-[2.2]" : "text-text-muted group-hover:text-brand stroke-[1.8]"}`} />
+                      <Icon className={`h-4.5 w-4.5 shrink-0 transition-colors ${item.active ? "text-brand stroke-[2.2]" : "text-text-muted group-hover:text-brand stroke-[1.8]"}`} />
                       <span className={`whitespace-nowrap overflow-hidden text-ellipsis ${item.active ? "text-brand font-bold" : "text-text-main"}`}>
                         {item.label}
                       </span>
@@ -612,11 +612,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </aside>
 
-          {/* Floating Collapse / Expand Button Outside Sidebar Container */}
+          {/* Floating Collapse / Expand Button: Centered at Y = 36px in the 72px header line */}
           <button
             type="button"
             onClick={toggleSidebar}
-            className="absolute -right-3.5 top-6 z-30 flex h-7 w-7 items-center justify-center rounded-full bg-transparent hover:bg-blue-50 text-text-sub hover:text-brand dark:hover:bg-blue-950/50 transition-colors cursor-pointer outline-none focus:outline-none border-0"
+            className="absolute -right-3.5 top-[22px] z-30 flex h-7 w-7 items-center justify-center rounded-full bg-transparent hover:bg-blue-50 text-text-sub hover:text-brand dark:hover:bg-blue-950/50 transition-colors cursor-pointer outline-none focus:outline-none border-0"
             title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -740,8 +740,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Top Bar with User Profile Dropdown (Full Width, Header with Sched design tokens) */}
-          <header className="hidden md:flex h-15 w-full items-center justify-end bg-canvas px-6 sm:px-8 gap-4 shrink-0">
+          {/* Top Bar with User Profile Dropdown (Increased height h-[72px], horizontally aligned with Logo and Collapse button) */}
+          <header className="hidden md:flex h-[72px] w-full items-center justify-end bg-canvas px-6 sm:px-8 gap-4 shrink-0">
             <ThemeSwitcher align="right" />
 
             {/* User Profile Dropdown Menu in Top Navbar */}
