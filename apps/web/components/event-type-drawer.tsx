@@ -595,7 +595,6 @@ export function EventTypeDrawer({
             }`}
           />
         </div>
-        <p className="text-xs text-text-muted font-medium pl-1">One-on-One</p>
         {(errors.title || errors.slug) && (
           <p className="text-xs text-rose-500 font-medium pl-1 animate-in fade-in-50">
             {errors.title || (errors.slug === "taken" ? "You already have an event type with this title in your account. Please choose a different title." : errors.slug)}

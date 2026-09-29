@@ -293,8 +293,6 @@ function EventTypeListContent() {
                         <span>{item.durationMinutes} min</span>
                         <span>•</span>
                         <span>{item.location?.type ? item.location.type.replace(/_/g, " ") : "Video Call"}</span>
-                        <span>•</span>
-                        <span>One-on-One</span>
                       </div>
 
                       <p className="mt-0.5 text-xs text-text-muted font-normal">
