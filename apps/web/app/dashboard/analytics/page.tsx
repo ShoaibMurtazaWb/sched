@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import { api, type CurrentUser } from "@/lib/api";
@@ -216,9 +215,6 @@ export default function AnalyticsPage() {
                       Popular Events
                     </h2>
                   </div>
-                  <Badge variant="secondary" className="tabular-nums font-sans text-[11px]">
-                    {data.eventTypes.length} active
-                  </Badge>
                 </div>
 
                 {!hasBookings || data.eventTypes.length === 0 ? (
