@@ -254,7 +254,7 @@ function EventTypeListContent() {
         </div>
 
         {/* Dedicated Scroll Container for Event Cards */}
-        <div className="flex-1 min-h-0 overflow-y-auto space-y-3.5 pr-1.5 pt-2">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-3.5 pr-3 sm:pr-4 pt-2">
 
         {/* Loading Skeletons */}
         {isLoading && (

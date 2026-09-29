@@ -380,7 +380,7 @@ export default function BookingsPage() {
         </div>
 
         {/* Dedicated Scroll Container for Content List */}
-        <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1.5 pt-1">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-3 sm:pr-4 pt-1">
           {isLoading ? (
               <div className="space-y-3">
                 <Skeleton className="h-20 w-full rounded-2xl" />
