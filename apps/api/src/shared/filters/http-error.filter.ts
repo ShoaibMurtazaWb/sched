@@ -47,6 +47,8 @@ export class HttpErrorFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
     const requestId = requestIdOf(request);
+    const method = request.method;
+    const path = request.originalUrl || request.url;
 
     if (isAppError(exception)) {
       const details = exception.details || {};
@@ -54,6 +56,8 @@ export class HttpErrorFilter implements ExceptionFilter {
         code: exception.code,
         details,
         requestId,
+        method,
+        path,
         status: exception.httpStatus,
       });
       response.status(exception.httpStatus).json({
@@ -220,8 +224,8 @@ function mapUniqueConstraint(error: Prisma.PrismaClientKnownRequestError): {
   if (targets.includes("user_id") || targets.includes("slug") || targets.some((t) => t.includes("slug"))) {
     return {
       code: "EVENT_TYPE_SLUG_CONFLICT",
-      message: "You already have an event type with this slug.",
-      details: { fields: { slug: "taken" } },
+      message: "You already have an event type with this title or link in your account.",
+      details: { fields: { slug: "taken", title: "You already have an event type with this title in your account." } },
     };
   }
   return {

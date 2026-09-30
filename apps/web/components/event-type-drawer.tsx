@@ -923,6 +923,12 @@ export function EventTypeDrawer({
                           });
                         }
                       }}
+                      onBlur={() => {
+                        const err = validateInPersonAddress(inPersonAddress);
+                        if (err) {
+                          setErrors((prev) => ({ ...prev, inPersonAddress: err }));
+                        }
+                      }}
                       placeholder="e.g. 123 Main St, Suite 400"
                       className={`h-9 text-xs rounded-xl border bg-surface text-text-main transition-colors ${
                         errors.inPersonAddress
@@ -1017,6 +1023,12 @@ export function EventTypeDrawer({
                             delete copy.customLinkUrl;
                             return copy;
                           });
+                        }
+                      }}
+                      onBlur={() => {
+                        const err = validateCustomUrl(customLinkUrl);
+                        if (err) {
+                          setErrors((prev) => ({ ...prev, customLinkUrl: err }));
                         }
                       }}
                       placeholder="https://custom-room.example.com/meet"

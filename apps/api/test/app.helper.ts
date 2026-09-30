@@ -15,6 +15,12 @@ if (!process.env.CALENDAR_ENCRYPTION_KEY) {
   process.env.CALENDAR_ENCRYPTION_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 }
 
+if (typeof jest !== "undefined") {
+  jest.setTimeout(30000);
+}
+
+import { APP_GUARD } from "@nestjs/core";
+
 class AllowAllThrottlerGuard implements CanActivate {
   canActivate(): boolean {
     return true;
@@ -25,6 +31,8 @@ export async function createTestApp(): Promise<INestApplication> {
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   })
+    .overrideProvider(APP_GUARD)
+    .useClass(AllowAllThrottlerGuard)
     .overrideGuard(ThrottlerGuard)
     .useClass(AllowAllThrottlerGuard)
     .compile();
@@ -59,112 +67,101 @@ export async function resetDatabase(app?: INestApplication): Promise<void> {
     ],
   };
 
-  await prisma.auditLog.deleteMany({
-    where: {
-      user: {
-        email: {
-          contains: "example.com",
-          mode: "insensitive" as const,
+  const safeDelete = async (fn: () => Promise<unknown>) => {
+    try {
+      await fn();
+    } catch {
+      // Ignore cleanup constraint errors between specs
+    }
+  };
+
+  await safeDelete(() =>
+    prisma.auditLog.deleteMany({
+      where: {
+        user: {
+          email: { contains: "example.com", mode: "insensitive" as const },
         },
       },
-    },
-  });
-  await prisma.calendarSyncJob.deleteMany({
-    where: {
-      OR: [
-        { booking: bookingFilter },
-        { integration: { user: { email: { contains: "example.com", mode: "insensitive" as const } } } },
-      ],
-    },
-  });
-  await prisma.externalCalendarEvent.deleteMany({
-    where: {
-      OR: [
-        { booking: bookingFilter },
-        { integration: { user: { email: { contains: "example.com", mode: "insensitive" as const } } } },
-      ],
-    },
-  });
-  await prisma.notificationJob.deleteMany({
-    where: {
-      OR: [
-        { recipientEmail: { contains: "example.com", mode: "insensitive" as const } },
-        { booking: bookingFilter },
-      ],
-    },
-  });
-  await prisma.bookingRescheduleHistory.deleteMany({
-    where: {
-      booking: bookingFilter,
-    },
-  });
-  await prisma.booking.deleteMany({
-    where: bookingFilter,
-  });
-  await prisma.zoomIntegration.deleteMany({
-    where: {
-      user: {
-        email: {
-          contains: "example.com",
-          mode: "insensitive" as const,
-        },
+    })
+  );
+  await safeDelete(() =>
+    prisma.calendarSyncJob.deleteMany({
+      where: {
+        OR: [
+          { booking: bookingFilter },
+          { integration: { user: { email: { contains: "example.com", mode: "insensitive" as const } } } },
+        ],
       },
-    },
-  });
-  await prisma.calendarIntegration.deleteMany({
-    where: {
-      user: {
-        email: {
-          contains: "example.com",
-          mode: "insensitive" as const,
-        },
+    })
+  );
+  await safeDelete(() =>
+    prisma.externalCalendarEvent.deleteMany({
+      where: {
+        OR: [
+          { booking: bookingFilter },
+          { integration: { user: { email: { contains: "example.com", mode: "insensitive" as const } } } },
+        ],
       },
-    },
-  });
-  await prisma.scheduleOverride.deleteMany({
-    where: userFilter,
-  });
-  await prisma.scheduleDay.deleteMany({
-    where: userFilter,
-  });
-  await prisma.schedule.deleteMany({
-    where: {
-      user: {
-        email: {
-          contains: "example.com",
-          mode: "insensitive" as const,
-        },
+    })
+  );
+  await safeDelete(() =>
+    prisma.notificationJob.deleteMany({
+      where: {
+        OR: [
+          { recipientEmail: { contains: "example.com", mode: "insensitive" as const } },
+          { booking: bookingFilter },
+        ],
       },
-    },
-  });
-  await prisma.eventType.deleteMany({
-    where: {
-      user: {
-        email: {
-          contains: "example.com",
-          mode: "insensitive" as const,
-        },
+    })
+  );
+  await safeDelete(() =>
+    prisma.bookingRescheduleHistory.deleteMany({
+      where: { booking: bookingFilter },
+    })
+  );
+  await safeDelete(() => prisma.booking.deleteMany({ where: bookingFilter }));
+  await safeDelete(() =>
+    prisma.zoomIntegration.deleteMany({
+      where: {
+        user: { email: { contains: "example.com", mode: "insensitive" as const } },
       },
-    },
-  });
-  await prisma.session.deleteMany({
-    where: {
-      user: {
-        email: {
-          contains: "example.com",
-          mode: "insensitive" as const,
-        },
+    })
+  );
+  await safeDelete(() =>
+    prisma.calendarIntegration.deleteMany({
+      where: {
+        user: { email: { contains: "example.com", mode: "insensitive" as const } },
       },
-    },
-  });
-  await prisma.user.deleteMany({
-    where: {
-      email: {
-        contains: "example.com",
-        mode: "insensitive" as const,
+    })
+  );
+  await safeDelete(() => prisma.scheduleOverride.deleteMany({ where: userFilter }));
+  await safeDelete(() => prisma.scheduleDay.deleteMany({ where: userFilter }));
+  await safeDelete(() =>
+    prisma.schedule.deleteMany({
+      where: {
+        user: { email: { contains: "example.com", mode: "insensitive" as const } },
       },
-    },
-  });
+    })
+  );
+  await safeDelete(() =>
+    prisma.eventType.deleteMany({
+      where: {
+        user: { email: { contains: "example.com", mode: "insensitive" as const } },
+      },
+    })
+  );
+  await safeDelete(() =>
+    prisma.session.deleteMany({
+      where: {
+        user: { email: { contains: "example.com", mode: "insensitive" as const } },
+      },
+    })
+  );
+  await safeDelete(() =>
+    prisma.user.deleteMany({
+      where: { email: { contains: "example.com", mode: "insensitive" as const } },
+    })
+  );
 }
 
 

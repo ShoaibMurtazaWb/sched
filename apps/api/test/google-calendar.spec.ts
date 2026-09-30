@@ -712,6 +712,10 @@ describe("Week 5: Google Calendar Busy-Time Checking & Outbound Event Synchroniz
         .expect(201);
 
       mockProvider.simulateRevokedToken = true;
+      await prisma.calendarIntegration.update({
+        where: { id: integration.id },
+        data: { tokenExpiresAt: new Date(Date.now() - 1000) },
+      });
 
       // Worker runs sync and encounters revoked refresh token
       await syncProcessor.processPendingJobs(10);
