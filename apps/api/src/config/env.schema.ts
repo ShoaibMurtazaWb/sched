@@ -19,6 +19,9 @@ export const envSchema = z.object({
   SMTP_PASS: z.string().optional(),
   EMAIL_FROM: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
+  GMAIL_CLIENT_ID: z.string().optional(),
+  GMAIL_CLIENT_SECRET: z.string().optional(),
+  GMAIL_REFRESH_TOKEN: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

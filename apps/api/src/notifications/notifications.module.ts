@@ -5,6 +5,7 @@ import { EMAIL_PROVIDER } from "./interfaces/email-provider.interface";
 import { DevEmailProvider } from "./providers/dev-email.provider";
 import { SmtpEmailProvider } from "./providers/smtp-email.provider";
 import { ResendEmailProvider } from "./providers/resend-email.provider";
+import { GmailEmailProvider } from "./providers/gmail-email.provider";
 import { NotificationsController } from "./notifications.controller";
 import { NotificationsProcessor } from "./notifications.processor";
 import { NotificationsService } from "./notifications.service";
@@ -18,13 +19,15 @@ import { NotificationsService } from "./notifications.service";
     DevEmailProvider,
     SmtpEmailProvider,
     ResendEmailProvider,
+    GmailEmailProvider,
     {
       provide: EMAIL_PROVIDER,
       useFactory: (
         config: ConfigService,
         devProvider: DevEmailProvider,
         smtpProvider: SmtpEmailProvider,
-        resendProvider: ResendEmailProvider
+        resendProvider: ResendEmailProvider,
+        gmailProvider: GmailEmailProvider
       ) => {
         if (process.env.NODE_ENV === "test") {
           return devProvider;
@@ -35,6 +38,9 @@ import { NotificationsService } from "./notifications.service";
           (process.env.NODE_ENV === "production" ? "smtp" : "dev")
         ).toLowerCase();
 
+        if (providerType === "gmail") {
+          return gmailProvider;
+        }
         if (providerType === "resend") {
           return resendProvider;
         }
@@ -43,7 +49,13 @@ import { NotificationsService } from "./notifications.service";
         }
         return devProvider;
       },
-      inject: [ConfigService, DevEmailProvider, SmtpEmailProvider, ResendEmailProvider],
+      inject: [
+        ConfigService,
+        DevEmailProvider,
+        SmtpEmailProvider,
+        ResendEmailProvider,
+        GmailEmailProvider,
+      ],
     },
   ],
   exports: [
@@ -53,6 +65,7 @@ import { NotificationsService } from "./notifications.service";
     DevEmailProvider,
     SmtpEmailProvider,
     ResendEmailProvider,
+    GmailEmailProvider,
   ],
 })
 export class NotificationsModule {}

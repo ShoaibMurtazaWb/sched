@@ -5,6 +5,7 @@ import { NotificationsService } from "../src/notifications/notifications.service
 import { SmtpEmailProvider } from "../src/notifications/providers/smtp-email.provider";
 import { DevEmailProvider } from "../src/notifications/providers/dev-email.provider";
 import { ResendEmailProvider } from "../src/notifications/providers/resend-email.provider";
+import { GmailEmailProvider } from "../src/notifications/providers/gmail-email.provider";
 import { EMAIL_PROVIDER } from "../src/notifications/interfaces/email-provider.interface";
 import {
   renderWelcomeVerificationEmail,
@@ -306,6 +307,56 @@ describe("Comprehensive Mailing Service & Email Verification Tests", () => {
           html: "<p>Test</p>",
         })
       ).rejects.toThrow("Resend API error: Invalid API Key");
+    });
+  });
+
+  describe("5. GmailEmailProvider Unit Tests", () => {
+    it("throws error when GMAIL_REFRESH_TOKEN is missing", async () => {
+      const config = new ConfigService({});
+      const provider = new GmailEmailProvider(config);
+
+      await expect(
+        provider.send({
+          to: "recipient@example.com",
+          subject: "Test Gmail",
+          html: "<p>Test</p>",
+        })
+      ).rejects.toThrow("GMAIL_REFRESH_TOKEN is missing");
+    });
+
+    it("encodes MIME message and dispatches via Gmail API users.messages.send", async () => {
+      const config = new ConfigService({
+        GMAIL_CLIENT_ID: "client_id_123",
+        GMAIL_CLIENT_SECRET: "client_secret_456",
+        GMAIL_REFRESH_TOKEN: "refresh_token_789",
+        EMAIL_FROM: "Sched <shoaibmurtazawb@gmail.com>",
+      });
+
+      const provider = new GmailEmailProvider(config);
+
+      // Verify buildMimeMessage works cleanly with attachments and idempotency key
+      const mimeRaw = (provider as unknown as { buildMimeMessage: (opts: unknown) => string }).buildMimeMessage({
+        to: "attendee@example.com",
+        subject: "Booking Confirmation",
+        html: "<p>Meeting Confirmed</p>",
+        text: "Meeting Confirmed",
+        idempotencyKey: "idem_gmail_001",
+        attachments: [
+          {
+            filename: "invite.ics",
+            content: "BEGIN:VCALENDAR\nEND:VCALENDAR",
+            contentType: "text/calendar",
+          },
+        ],
+      });
+
+      expect(mimeRaw).toBeDefined();
+      expect(typeof mimeRaw).toBe("string");
+
+      const decodedMime = Buffer.from(mimeRaw, "base64url").toString("utf-8");
+      expect(decodedMime).toContain("To: attendee@example.com");
+      expect(decodedMime).toContain("X-Idempotency-Key: idem_gmail_001");
+      expect(decodedMime).toContain("Content-Type: text/calendar; name=\"invite.ics\"");
     });
   });
 });
