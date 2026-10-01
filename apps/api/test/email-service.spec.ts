@@ -1,12 +1,10 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { ConfigModule, ConfigService } from "@nestjs/config";
+import { ConfigService } from "@nestjs/config";
 import { AppModule } from "../src/app.module";
 import { NotificationsService } from "../src/notifications/notifications.service";
-import { NotificationsProcessor } from "../src/notifications/notifications.processor";
 import { SmtpEmailProvider } from "../src/notifications/providers/smtp-email.provider";
 import { DevEmailProvider } from "../src/notifications/providers/dev-email.provider";
 import { EMAIL_PROVIDER } from "../src/notifications/interfaces/email-provider.interface";
-import { PrismaService } from "../src/shared/prisma/prisma.service";
 import {
   renderWelcomeVerificationEmail,
   renderEmailVerificationEmail,
@@ -26,8 +24,6 @@ import {
 describe("Comprehensive Mailing Service & Email Verification Tests", () => {
   let moduleRef: TestingModule;
   let notificationsService: NotificationsService;
-  let notificationsProcessor: NotificationsProcessor;
-  let prisma: PrismaService;
   let mockEmailProvider: { send: jest.Mock };
 
   beforeAll(async () => {
@@ -43,8 +39,6 @@ describe("Comprehensive Mailing Service & Email Verification Tests", () => {
       .compile();
 
     notificationsService = moduleRef.get(NotificationsService);
-    notificationsProcessor = moduleRef.get(NotificationsProcessor);
-    prisma = moduleRef.get(PrismaService);
   });
 
   afterAll(async () => {
