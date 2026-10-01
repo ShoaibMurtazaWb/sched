@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
+import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import type { EmailProvider, EmailSendResult, SendEmailOptions } from "../interfaces/email-provider.interface";
 
 @Injectable()
@@ -19,12 +20,18 @@ export class SmtpEmailProvider implements EmailProvider {
 
     this.fromAddress = this.config.get<string>("EMAIL_FROM", "Sched Notifications <no-reply@sched.com>");
 
-    this.transporter = nodemailer.createTransport({
+    const smtpConfig: SMTPTransport.Options & { family?: number } = {
       host,
       port,
       secure,
       auth: user && pass ? { user, pass } : undefined,
-    });
+      family: 4, // Force IPv4 resolution to prevent ENETUNREACH errors on cloud hosts like Render
+      connectionTimeout: 10000, // 10 seconds connection timeout
+      greetingTimeout: 10000, // 10 seconds greeting timeout
+      socketTimeout: 15000, // 15 seconds socket inactivity timeout
+    };
+
+    this.transporter = nodemailer.createTransport(smtpConfig as SMTPTransport.Options);
   }
 
   async send(options: SendEmailOptions): Promise<EmailSendResult> {
