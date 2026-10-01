@@ -12,13 +12,16 @@ export class SmtpEmailProvider implements EmailProvider {
   private readonly fromAddress: string;
 
   constructor(private readonly config: ConfigService) {
-    const host = this.config.get<string>("SMTP_HOST", "localhost");
-    const port = Number(this.config.get<string>("SMTP_PORT", "1025"));
-    const user = this.config.get<string>("SMTP_USER", "");
-    const pass = this.config.get<string>("SMTP_PASS", "");
-    const secure = this.config.get<string>("SMTP_SECURE", "false") === "true";
+    const host = this.config.get<string>("SMTP_HOST") || process.env.SMTP_HOST || "localhost";
+    const port = Number(this.config.get<string>("SMTP_PORT") || process.env.SMTP_PORT || "1025");
+    const user = this.config.get<string>("SMTP_USER") || process.env.SMTP_USER || "";
+    const pass = this.config.get<string>("SMTP_PASS") || process.env.SMTP_PASS || "";
+    const secure = (this.config.get<string>("SMTP_SECURE") || process.env.SMTP_SECURE || "false") === "true";
 
-    this.fromAddress = this.config.get<string>("EMAIL_FROM", "Sched Notifications <no-reply@sched.com>");
+    this.fromAddress =
+      this.config.get<string>("EMAIL_FROM") ||
+      process.env.EMAIL_FROM ||
+      "Sched Notifications <no-reply@sched.com>";
 
     this.transporter = nodemailer.createTransport({
       host,

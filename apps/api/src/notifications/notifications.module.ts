@@ -26,10 +26,10 @@ import { NotificationsService } from "./notifications.service";
         if (process.env.NODE_ENV === "test") {
           return devProvider;
         }
-        const providerType = config.get<string>(
-          "EMAIL_PROVIDER",
-          process.env.NODE_ENV === "production" ? "smtp" : "dev"
-        );
+        const providerType =
+          config.get<string>("EMAIL_PROVIDER") ||
+          process.env.EMAIL_PROVIDER ||
+          (process.env.NODE_ENV === "production" ? "smtp" : "dev");
         return providerType === "smtp" ? smtpProvider : devProvider;
       },
       inject: [ConfigService, DevEmailProvider, SmtpEmailProvider],
