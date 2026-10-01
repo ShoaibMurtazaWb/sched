@@ -18,22 +18,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Logo } from "@/components/logo";
 import type { PublicHostProfileResponse } from "@sched/api-contract";
 
-function getLocationDisplay(locationType?: string | null, locationData?: Record<string, unknown> | null) {
-  if (!locationType) return { label: "Zoom / Video Call", icon: Video };
+function getLocationDisplay(locationType?: string | null) {
+  if (!locationType) return { label: "Zoom", icon: Video };
 
   switch (locationType) {
     case "ZOOM":
-      return { label: "Zoom Video", icon: Video };
-    case "IN_PERSON": {
-      const address = locationData?.address ? String(locationData.address) : "";
-      return { label: address ? `In-Person: ${address}` : "In-Person Meeting", icon: MapPin };
-    }
+      return { label: "Zoom", icon: Video };
+    case "IN_PERSON":
+      return { label: "In-Person", icon: MapPin };
     case "HOST_CALLS_ATTENDEE":
     case "ATTENDEE_CALLS_HOST":
       return { label: "Phone Call", icon: PhoneCall };
     case "CUSTOM_LINK":
     case "STATIC_VIDEO":
-      return { label: "Web Conference / Custom Link", icon: Link2 };
+      return { label: "Web Conference", icon: Link2 };
     default:
       return { label: "Video Call", icon: Video };
   }
@@ -204,7 +202,7 @@ export default function PublicHostPage({
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {profile.eventTypes.map((et) => {
-                  const loc = getLocationDisplay(et.locationType, et.locationData);
+                  const loc = getLocationDisplay(et.locationType);
                   const LocIcon = loc.icon;
 
                   return (
