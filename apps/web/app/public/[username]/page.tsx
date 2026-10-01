@@ -7,12 +7,37 @@ import {
   Calendar,
   ArrowRight,
   Globe,
+  MapPin,
+  Video,
+  PhoneCall,
+  Link2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Logo } from "@/components/logo";
 import type { PublicHostProfileResponse } from "@sched/api-contract";
+
+function getLocationDisplay(locationType?: string | null, locationData?: Record<string, unknown> | null) {
+  if (!locationType) return { label: "Zoom / Video Call", icon: Video };
+
+  switch (locationType) {
+    case "ZOOM":
+      return { label: "Zoom Video", icon: Video };
+    case "IN_PERSON": {
+      const address = locationData?.address ? String(locationData.address) : "";
+      return { label: address ? `In-Person: ${address}` : "In-Person Meeting", icon: MapPin };
+    }
+    case "HOST_CALLS_ATTENDEE":
+    case "ATTENDEE_CALLS_HOST":
+      return { label: "Phone Call", icon: PhoneCall };
+    case "CUSTOM_LINK":
+    case "STATIC_VIDEO":
+      return { label: "Web Conference / Custom Link", icon: Link2 };
+    default:
+      return { label: "Video Call", icon: Video };
+  }
+}
 
 export default function PublicHostPage({
   params,
@@ -178,37 +203,48 @@ export default function PublicHostPage({
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {profile.eventTypes.map((et) => (
-                  <Link
-                    key={et.id}
-                    href={`/public/${profile.user.username}/${et.slug}`}
-                    className="group block"
-                  >
-                    <Card className="h-full p-6 bg-[var(--bg-surface)] border-[var(--border-subtle)] rounded-xl shadow-2xs hover:border-blue-500 hover:shadow-xs transition-[border-color,box-shadow] duration-150 ease-out flex flex-col justify-between space-y-4 cursor-pointer">
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-semibold tabular-nums font-sans text-blue-700">
-                            {et.durationMinutes} min meeting
-                          </span>
-                          <div className="flex items-center gap-1 text-xs text-neutral-500 group-hover:text-blue-600 transition-colors duration-150 font-semibold">
-                            <span>Select</span>
-                            <ArrowRight className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5" />
+                {profile.eventTypes.map((et) => {
+                  const loc = getLocationDisplay(et.locationType, et.locationData);
+                  const LocIcon = loc.icon;
+
+                  return (
+                    <Link
+                      key={et.id}
+                      href={`/public/${profile.user.username}/${et.slug}`}
+                      className="group block"
+                    >
+                      <Card className="h-full p-6 bg-[var(--bg-surface)] border-[var(--border-subtle)] rounded-xl shadow-2xs hover:border-blue-500 hover:shadow-xs transition-[border-color,box-shadow] duration-150 ease-out flex flex-col justify-between space-y-4 cursor-pointer">
+                        <div>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-semibold tabular-nums font-sans text-blue-700">
+                                {et.durationMinutes} min meeting
+                              </span>
+                              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] px-2.5 py-0.5 text-xs font-medium text-[var(--text-secondary)]">
+                                <LocIcon className="h-3 w-3 text-[var(--text-muted)]" />
+                                <span className="truncate max-w-[150px]">{loc.label}</span>
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-neutral-500 group-hover:text-blue-600 transition-colors duration-150 font-semibold shrink-0">
+                              <span>Show or open</span>
+                              <ArrowRight className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5" />
+                            </div>
                           </div>
+
+                          <h3 className="mt-3 text-base font-semibold text-[var(--text-primary)] group-hover:text-blue-600 transition-colors">
+                            {et.title}
+                          </h3>
+
+                          {et.description && (
+                            <p className="mt-1.5 text-xs text-[var(--text-secondary)] line-clamp-2 leading-relaxed">
+                              {et.description}
+                            </p>
+                          )}
                         </div>
-
-                        <h3 className="mt-3 text-base font-semibold text-[var(--text-primary)] group-hover:text-blue-600 transition-colors">
-                          {et.title}
-                        </h3>
-
-                        {et.description && (
-                          <p className="mt-1.5 text-xs text-[var(--text-secondary)] line-clamp-2 leading-relaxed">
-                            {et.description}
-                          </p>
-                        )}
-                      </div>
-                    </Card>
-                  </Link>
-                ))}
+                      </Card>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </div>

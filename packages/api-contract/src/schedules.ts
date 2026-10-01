@@ -86,5 +86,7 @@ export interface PublicHostProfileResponse {
     durationMinutes: number;
     beforeBufferMinutes: number;
     afterBufferMinutes: number;
+    locationType?: string | null;
+    locationData?: Record<string, unknown> | null;
   }>;
 }

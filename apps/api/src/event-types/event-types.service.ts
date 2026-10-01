@@ -289,6 +289,8 @@ export class EventTypesService {
         durationMinutes: et.durationMinutes,
         beforeBufferMinutes: et.beforeBufferMinutes,
         afterBufferMinutes: et.afterBufferMinutes,
+        locationType: et.locationType,
+        locationData: (et.locationData as Record<string, unknown>) ?? null,
       })),
     };
   }
