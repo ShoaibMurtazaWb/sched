@@ -4,6 +4,7 @@ import { AppModule } from "../src/app.module";
 import { NotificationsService } from "../src/notifications/notifications.service";
 import { SmtpEmailProvider } from "../src/notifications/providers/smtp-email.provider";
 import { DevEmailProvider } from "../src/notifications/providers/dev-email.provider";
+import { ResendEmailProvider } from "../src/notifications/providers/resend-email.provider";
 import { EMAIL_PROVIDER } from "../src/notifications/interfaces/email-provider.interface";
 import {
   renderWelcomeVerificationEmail,
@@ -226,6 +227,85 @@ describe("Comprehensive Mailing Service & Email Verification Tests", () => {
     it("instantiates DevEmailProvider", () => {
       const devProvider = new DevEmailProvider();
       expect(devProvider).toBeDefined();
+    });
+  });
+
+  describe("4. ResendEmailProvider Unit Tests", () => {
+    it("correctly dispatches email via Resend SDK with attachments and idempotency key", async () => {
+      const config = new ConfigService({
+        RESEND_API_KEY: "re_123456789",
+        EMAIL_FROM: "Sched <no-reply@sched.com>",
+      });
+
+      const provider = new ResendEmailProvider(config);
+
+      const mockSend = jest.fn().mockResolvedValue({
+        data: { id: "resend_msg_999" },
+        error: null,
+      });
+
+      (provider as unknown as { resend: { emails: { send: jest.Mock } } }).resend = {
+        emails: { send: mockSend },
+      };
+
+      const result = await provider.send({
+        to: "attendee@example.com",
+        subject: "Meeting Confirmation",
+        html: "<p>Confirmed</p>",
+        text: "Confirmed",
+        idempotencyKey: "idem_key_123",
+        attachments: [
+          {
+            filename: "invite.ics",
+            content: "BEGIN:VCALENDAR\nEND:VCALENDAR",
+            contentType: "text/calendar",
+          },
+        ],
+      });
+
+      expect(result).toEqual({ messageId: "resend_msg_999", success: true });
+      expect(mockSend).toHaveBeenCalledWith(
+        {
+          from: "Sched <no-reply@sched.com>",
+          to: "attendee@example.com",
+          subject: "Meeting Confirmation",
+          html: "<p>Confirmed</p>",
+          text: "Confirmed",
+          attachments: [
+            {
+              filename: "invite.ics",
+              content: Buffer.from("BEGIN:VCALENDAR\nEND:VCALENDAR"),
+            },
+          ],
+        },
+        { idempotencyKey: "idem_key_123" }
+      );
+    });
+
+    it("rethrows error when Resend API returns an error response", async () => {
+      const config = new ConfigService({
+        RESEND_API_KEY: "re_invalid_key",
+        EMAIL_FROM: "Sched <no-reply@sched.com>",
+      });
+
+      const provider = new ResendEmailProvider(config);
+
+      const mockSend = jest.fn().mockResolvedValue({
+        data: null,
+        error: { message: "Invalid API Key" },
+      });
+
+      (provider as unknown as { resend: { emails: { send: jest.Mock } } }).resend = {
+        emails: { send: mockSend },
+      };
+
+      await expect(
+        provider.send({
+          to: "user@example.com",
+          subject: "Test",
+          html: "<p>Test</p>",
+        })
+      ).rejects.toThrow("Resend API error: Invalid API Key");
     });
   });
 });
