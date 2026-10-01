@@ -6,6 +6,9 @@ import { EMAIL_PROVIDER, type EmailProvider } from "./interfaces/email-provider.
 import {
   renderWelcomeVerificationEmail,
   renderLoginSecurityAlertEmail,
+  renderEmailVerificationEmail,
+  renderPasswordResetEmail,
+  renderEmailChangeConfirmationEmail,
   type SnapshotPayload,
 } from "./templates/email-templates";
 
@@ -328,6 +331,67 @@ export class NotificationsService {
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       this.logger.error(`Failed to send login alert email to ${user.email}: ${errMsg}`);
+    }
+  }
+
+  async sendEmailVerificationEmail(
+    user: { id: string; name: string; email: string },
+    rawToken: string
+  ): Promise<void> {
+    try {
+      const verifyUrl = `${this.appUrl}/auth/verify-email?token=${rawToken}`;
+      const { subject, html, text } = renderEmailVerificationEmail(user, verifyUrl);
+      await this.emailProvider.send({
+        to: user.email,
+        subject,
+        html,
+        text,
+      });
+      this.logger.log(`Email verification sent to ${user.email} (${user.id})`);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Failed to send email verification to ${user.email}: ${errMsg}`);
+    }
+  }
+
+  async sendPasswordResetEmail(
+    user: { id: string; name: string; email: string },
+    rawToken: string
+  ): Promise<void> {
+    try {
+      const resetUrl = `${this.appUrl}/auth/reset-password?token=${rawToken}`;
+      const { subject, html, text } = renderPasswordResetEmail(user, resetUrl);
+      await this.emailProvider.send({
+        to: user.email,
+        subject,
+        html,
+        text,
+      });
+      this.logger.log(`Password reset email sent to ${user.email} (${user.id})`);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Failed to send password reset email to ${user.email}: ${errMsg}`);
+    }
+  }
+
+  async sendEmailChangeConfirmationEmail(
+    user: { id: string; name: string; currentEmail: string },
+    newEmail: string,
+    rawToken: string
+  ): Promise<void> {
+    try {
+      const confirmUrl = `${this.appUrl}/auth/change-email/confirm?token=${rawToken}`;
+      const { subject, html, text } = renderEmailChangeConfirmationEmail(user, newEmail, confirmUrl);
+      await this.emailProvider.send({
+        to: newEmail,
+        subject,
+        html,
+        text,
+      });
+      this.logger.log(`Email change confirmation sent to new email ${newEmail} for user ${user.id}`);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Failed to send email change confirmation to ${newEmail}: ${errMsg}`);
     }
   }
 }

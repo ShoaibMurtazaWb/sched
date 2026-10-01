@@ -262,10 +262,13 @@ describe("Week 5: Google Calendar Busy-Time Checking & Outbound Event Synchroniz
     });
 
     const agent = request.agent(app.getHttpServer());
-    await agent.post("/api/v1/auth/login").send({
-      email,
-      password: "Password123!",
-    });
+    await agent
+      .post("/api/v1/auth/login")
+      .send({
+        email,
+        password: "Password123!",
+      })
+      .expect(200);
 
     return { user, agent };
   }

@@ -39,6 +39,8 @@ export const UserSettingsResponseSchema = z.object({
     username: z.string(),
     timezone: z.string(),
     avatarUrl: z.string().nullable().optional(),
+    emailVerified: z.boolean().optional(),
+    emailVerifiedAt: z.string().nullable().optional(),
     createdAt: z.string(),
   }),
   notificationPreferences: NotificationPreferencesSchema,

@@ -36,6 +36,8 @@ export class SettingsService {
         username: user.username,
         timezone: user.timezone,
         avatarUrl: user.avatarUrl,
+        emailVerified: Boolean(user.emailVerifiedAt),
+        emailVerifiedAt: user.emailVerifiedAt ? user.emailVerifiedAt.toISOString() : null,
         createdAt: user.createdAt.toISOString(),
       },
       notificationPreferences: {
@@ -71,22 +73,10 @@ export class SettingsService {
       }
     }
 
-    if (body.email && body.email.toLowerCase() !== user.email.toLowerCase()) {
-      const existingEmail = await this.prisma.user.findUnique({
-        where: { email: body.email.toLowerCase() },
-      });
-      if (existingEmail && existingEmail.id !== userId) {
-        throw new ConflictError("EMAIL_CONFLICT", "This email address is already in use by another account.", {
-          fields: { email: "taken" },
-        });
-      }
-    }
-
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
         name: body.name,
-        email: body.email ? body.email.toLowerCase() : undefined,
         username: body.username,
         timezone: body.timezone,
         avatarUrl: body.avatarUrl || null,
@@ -100,7 +90,6 @@ export class SettingsService {
       entityId: userId,
       metadata: {
         name: body.name,
-        email: body.email,
         username: body.username,
         timezone: body.timezone,
         avatarUrl: body.avatarUrl,
@@ -115,6 +104,8 @@ export class SettingsService {
         username: updated.username,
         timezone: updated.timezone,
         avatarUrl: updated.avatarUrl,
+        emailVerified: Boolean(updated.emailVerifiedAt),
+        emailVerifiedAt: updated.emailVerifiedAt ? updated.emailVerifiedAt.toISOString() : null,
         createdAt: updated.createdAt.toISOString(),
       },
       notificationPreferences: {

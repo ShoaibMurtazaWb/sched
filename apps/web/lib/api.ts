@@ -7,6 +7,8 @@ export type CurrentUser = {
   username: string;
   timezone: string;
   avatarUrl?: string | null;
+  emailVerified?: boolean;
+  emailVerifiedAt?: string | null;
   createdAt: string;
 };
 

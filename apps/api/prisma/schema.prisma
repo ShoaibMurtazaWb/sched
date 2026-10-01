@@ -20,6 +20,7 @@ model User {
   emailReminders         Boolean               @default(true) @map("email_reminders")
   bookingConfirmations   Boolean               @default(true) @map("booking_confirmations")
   marketingEmails        Boolean               @default(false) @map("marketing_emails")
+  emailVerifiedAt        DateTime?             @map("email_verified_at") @db.Timestamptz(6)
   defaultMeetingDuration Int                   @default(30) @map("default_meeting_duration")
   defaultBufferMinutes   Int                   @default(0) @map("default_buffer_minutes")
   createdAt              DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -28,12 +29,33 @@ model User {
   eventTypes             EventType[]
   schedules              Schedule[]
   bookings               Booking[]
+  authTokens             AuthToken[]
 
   calendarIntegrations CalendarIntegration[]
   zoomIntegration      ZoomIntegration?
   auditLogs            AuditLog[]
 
   @@map("users")
+}
+
+enum AuthTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  EMAIL_CHANGE
+}
+
+model AuthToken {
+  id        String        @id @default(uuid()) @db.Uuid
+  userId    String        @map("user_id") @db.Uuid
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      AuthTokenType
+  tokenHash String        @unique @map("token_hash")
+  payload   Json?
+  expiresAt DateTime      @map("expires_at") @db.Timestamptz(6)
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId, type])
+  @@map("auth_tokens")
 }
 
 model Session {

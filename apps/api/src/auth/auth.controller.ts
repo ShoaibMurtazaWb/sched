@@ -1,6 +1,21 @@
 import { Body, Controller, Get, HttpCode, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { ApiCookieAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { loginBodySchema, registerBodySchema, type LoginBody, type RegisterBody } from "@sched/api-contract";
+import {
+  loginBodySchema,
+  registerBodySchema,
+  requestPasswordResetBodySchema,
+  resetPasswordBodySchema,
+  requestEmailChangeBodySchema,
+  confirmEmailChangeBodySchema,
+  confirmEmailVerificationBodySchema,
+  type LoginBody,
+  type RegisterBody,
+  type RequestPasswordResetBody,
+  type ResetPasswordBody,
+  type RequestEmailChangeBody,
+  type ConfirmEmailChangeBody,
+  type ConfirmEmailVerificationBody,
+} from "@sched/api-contract";
 import { Throttle, ThrottlerGuard } from "@nestjs/throttler";
 import type { Request, Response } from "express";
 import { zodPipe } from "../shared/pipes/zod-validation.pipe";
@@ -67,5 +82,62 @@ export class AuthController {
   @ApiOperation({ summary: "Current authenticated user" })
   me(@CurrentUserId() userId: string) {
     return this.auth.me(userId);
+  }
+
+  @Post("verify-email/request")
+  @HttpCode(200)
+  @UseGuards(SessionAuthGuard)
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "Request a new email verification link" })
+  requestEmailVerification(@CurrentUserId() userId: string) {
+    return this.auth.requestEmailVerification(userId);
+  }
+
+  @Post("verify-email/confirm")
+  @HttpCode(200)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOperation({ summary: "Confirm email address verification token" })
+  confirmEmailVerification(@Body(zodPipe(confirmEmailVerificationBodySchema)) body: ConfirmEmailVerificationBody) {
+    return this.auth.confirmEmailVerification(body);
+  }
+
+  @Post("forgot-password")
+  @HttpCode(200)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @ApiOperation({ summary: "Request password reset email link" })
+  requestPasswordReset(@Body(zodPipe(requestPasswordResetBodySchema)) body: RequestPasswordResetBody) {
+    return this.auth.requestPasswordReset(body);
+  }
+
+  @Post("reset-password")
+  @HttpCode(200)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @ApiOperation({ summary: "Reset account password with token" })
+  resetPassword(@Body(zodPipe(resetPasswordBodySchema)) body: ResetPasswordBody) {
+    return this.auth.resetPassword(body);
+  }
+
+  @Post("email-change/request")
+  @HttpCode(200)
+  @UseGuards(SessionAuthGuard)
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "Request secure email change confirmation" })
+  requestEmailChange(
+    @CurrentUserId() userId: string,
+    @Body(zodPipe(requestEmailChangeBodySchema)) body: RequestEmailChangeBody
+  ) {
+    return this.auth.requestEmailChange(userId, body);
+  }
+
+  @Post("email-change/confirm")
+  @HttpCode(200)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOperation({ summary: "Confirm new email address with token" })
+  confirmEmailChange(@Body(zodPipe(confirmEmailChangeBodySchema)) body: ConfirmEmailChangeBody) {
+    return this.auth.confirmEmailChange(body);
   }
 }

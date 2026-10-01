@@ -7,6 +7,8 @@ export type CurrentUserResponse = {
   username: string;
   timezone: string;
   avatarUrl?: string | null;
+  emailVerified: boolean;
+  emailVerifiedAt?: string | null;
   createdAt: string;
 };
 
@@ -18,6 +20,8 @@ export function toCurrentUser(user: User): CurrentUserResponse {
     username: user.username,
     timezone: user.timezone,
     avatarUrl: user.avatarUrl ?? null,
+    emailVerified: Boolean(user.emailVerifiedAt),
+    emailVerifiedAt: user.emailVerifiedAt ? user.emailVerifiedAt.toISOString() : null,
     createdAt: user.createdAt.toISOString(),
   };
 }

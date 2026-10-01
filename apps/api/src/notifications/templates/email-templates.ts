@@ -1033,3 +1033,147 @@ Powered by Sched
 
   return { subject, html, text };
 }
+
+export function renderEmailVerificationEmail(
+  user: { name: string; email: string },
+  verifyUrl: string
+): { subject: string; html: string; text: string } {
+  const subject = `Verify your email address for Sched`;
+  const safeName = escapeHtml(user.name);
+
+  const html = baseHtml(`
+    <div style="text-align: center; margin-bottom: 24px;">
+      <span class="badge badge-info">Email Verification</span>
+      <h1 style="font-size: 24px; font-weight: 800; margin: 16px 0 8px 0; color: #0f172a;">Verify Your Email Address</h1>
+      <p style="font-size: 15px; color: #475569; line-height: 1.6; max-width: 480px; margin: 0 auto;">
+        Hi <strong>${safeName}</strong>, please confirm your email address (<strong>${escapeHtml(user.email)}</strong>) to complete your Sched account setup and unlock full features.
+      </p>
+    </div>
+
+    <div style="text-align: center; margin: 28px 0;">
+      <a href="${verifyUrl}" class="btn" style="background-color: #0069ff; color: #ffffff !important; padding: 14px 32px; font-size: 15px; font-weight: 700; text-decoration: none; border-radius: 10px; display: inline-block;">
+        Verify Email Address →
+      </a>
+    </div>
+
+    <div style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 16px;">
+      If the button above does not work, copy and paste this URL into your browser:<br>
+      <a href="${verifyUrl}" style="color: #0069ff; word-break: break-all;">${verifyUrl}</a>
+    </div>
+  `);
+
+  const text = `VERIFY YOUR EMAIL ADDRESS - SCHED
+
+Hi ${user.name},
+
+Please verify your email address (${user.email}) by clicking the link below:
+
+${verifyUrl}
+
+This link will expire in 24 hours. If you did not create a Sched account, you can safely ignore this email.
+
+Powered by Sched
+`;
+
+  return { subject, html, text };
+}
+
+export function renderPasswordResetEmail(
+  user: { name: string; email: string },
+  resetUrl: string
+): { subject: string; html: string; text: string } {
+  const subject = `Reset your Sched account password`;
+  const safeName = escapeHtml(user.name);
+
+  const html = baseHtml(`
+    <div style="text-align: center; margin-bottom: 24px;">
+      <span class="badge badge-danger">Password Reset</span>
+      <h1 style="font-size: 24px; font-weight: 800; margin: 16px 0 8px 0; color: #0f172a;">Reset Your Password</h1>
+      <p style="font-size: 15px; color: #475569; line-height: 1.6; max-width: 480px; margin: 0 auto;">
+        Hi <strong>${safeName}</strong>, we received a request to reset the password for your Sched account (<strong>${escapeHtml(user.email)}</strong>).
+      </p>
+    </div>
+
+    <div style="text-align: center; margin: 28px 0;">
+      <a href="${resetUrl}" class="btn" style="background-color: #dc2626; color: #ffffff !important; padding: 14px 32px; font-size: 15px; font-weight: 700; text-decoration: none; border-radius: 10px; display: inline-block; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);">
+        Reset Password →
+      </a>
+    </div>
+
+    <div style="background-color: #f8fafc; border-radius: 10px; padding: 14px; margin: 20px 0; font-size: 12px; color: #64748b; text-align: center;">
+      This security link is valid for 1 hour. If you did not request a password reset, you can safely disregard this message. Your password will remain unchanged.
+    </div>
+
+    <div style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 16px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+      Link not working? Copy & paste this URL:<br>
+      <a href="${resetUrl}" style="color: #dc2626; word-break: break-all;">${resetUrl}</a>
+    </div>
+  `);
+
+  const text = `RESET YOUR PASSWORD - SCHED
+
+Hi ${user.name},
+
+We received a request to reset your Sched password for ${user.email}.
+
+Click the link below to set a new password:
+${resetUrl}
+
+This link is valid for 1 hour. If you did not request this, please ignore this email.
+
+Powered by Sched
+`;
+
+  return { subject, html, text };
+}
+
+export function renderEmailChangeConfirmationEmail(
+  user: { name: string; currentEmail: string },
+  newEmail: string,
+  confirmUrl: string
+): { subject: string; html: string; text: string } {
+  const subject = `Confirm your new email address for Sched`;
+  const safeName = escapeHtml(user.name);
+  const safeNewEmail = escapeHtml(newEmail);
+
+  const html = baseHtml(`
+    <div style="text-align: center; margin-bottom: 24px;">
+      <span class="badge badge-info">Email Address Change</span>
+      <h1 style="font-size: 24px; font-weight: 800; margin: 16px 0 8px 0; color: #0f172a;">Confirm New Email Address</h1>
+      <p style="font-size: 15px; color: #475569; line-height: 1.6; max-width: 480px; margin: 0 auto;">
+        Hi <strong>${safeName}</strong>, you requested to change your Sched login email to <strong>${safeNewEmail}</strong>.
+      </p>
+    </div>
+
+    <div style="text-align: center; margin: 28px 0;">
+      <a href="${confirmUrl}" class="btn" style="background-color: #0069ff; color: #ffffff !important; padding: 14px 32px; font-size: 15px; font-weight: 700; text-decoration: none; border-radius: 10px; display: inline-block;">
+        Confirm New Email →
+      </a>
+    </div>
+
+    <div style="background-color: #f8fafc; border-radius: 10px; padding: 14px; margin: 20px 0; font-size: 12px; color: #64748b; text-align: center;">
+      Your account email will only update after clicking the confirmation button above. This link expires in 2 hours.
+    </div>
+
+    <div style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 16px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+      Link not working? Copy & paste this URL:<br>
+      <a href="${confirmUrl}" style="color: #0069ff; word-break: break-all;">${confirmUrl}</a>
+    </div>
+  `);
+
+  const text = `CONFIRM YOUR NEW EMAIL ADDRESS - SCHED
+
+Hi ${user.name},
+
+You requested to change your Sched email to ${newEmail}.
+
+Click the link below to confirm this change:
+${confirmUrl}
+
+This link is valid for 2 hours.
+
+Powered by Sched
+`;
+
+  return { subject, html, text };
+}

@@ -323,3 +323,31 @@ export type UpdateEventTypeBody = z.infer<typeof updateEventTypeBodySchema>;
 export type ListEventTypesQuery = z.infer<typeof listEventTypesQuerySchema>;
 export type PublicEventTypeParams = z.infer<typeof publicEventTypeParamsSchema>;
 
+export const requestPasswordResetBodySchema = z.object({
+  email: emailSchema,
+});
+
+export const resetPasswordBodySchema = z.object({
+  token: z.string().trim().min(1, "Reset token is required"),
+  newPassword: passwordSchema,
+});
+
+export const requestEmailChangeBodySchema = z.object({
+  newEmail: emailSchema,
+  password: z.string().min(1, "Current password is required"),
+});
+
+export const confirmEmailChangeBodySchema = z.object({
+  token: z.string().trim().min(1, "Verification token is required"),
+});
+
+export const confirmEmailVerificationBodySchema = z.object({
+  token: z.string().trim().min(1, "Verification token is required"),
+});
+
+export type RequestPasswordResetBody = z.infer<typeof requestPasswordResetBodySchema>;
+export type ResetPasswordBody = z.infer<typeof resetPasswordBodySchema>;
+export type RequestEmailChangeBody = z.infer<typeof requestEmailChangeBodySchema>;
+export type ConfirmEmailChangeBody = z.infer<typeof confirmEmailChangeBodySchema>;
+export type ConfirmEmailVerificationBody = z.infer<typeof confirmEmailVerificationBodySchema>;
+

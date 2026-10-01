@@ -44,8 +44,10 @@ export default function SettingsPage() {
   // Email Change Modal State
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [newEmailInput, setNewEmailInput] = useState("");
+  const [emailPasswordInput, setEmailPasswordInput] = useState("");
   const [emailModalError, setEmailModalError] = useState<string | null>(null);
   const [isSavingEmail, setIsSavingEmail] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<"unverified" | "sending" | "sent">("unverified");
 
   const DURATION_OPTIONS = [
@@ -117,6 +119,7 @@ export default function SettingsPage() {
       setUsername(data.profile.username);
       setTimezone(data.profile.timezone);
       setAvatarUrl(data.profile.avatarUrl || "");
+      setEmailVerified(data.profile.emailVerified ?? false);
 
       setEmailReminders(data.notificationPreferences.emailReminders);
       setBookingConfirmations(data.notificationPreferences.bookingConfirmations);
@@ -134,16 +137,23 @@ export default function SettingsPage() {
 
   function openEmailModal() {
     setNewEmailInput("");
+    setEmailPasswordInput("");
     setEmailModalError(null);
     setIsEmailModalOpen(true);
   }
 
-  function handleVerifyEmail() {
+  async function handleVerifyEmail() {
     setVerificationStatus("sending");
-    setTimeout(() => {
+    try {
+      await api<{ success: boolean; message: string }>("/auth/verify-email/request", {
+        method: "POST",
+      });
       setVerificationStatus("sent");
       toast.success("Verification email sent", `We sent a confirmation link to ${email}. Check your inbox.`);
-    }, 600);
+    } catch (err) {
+      setVerificationStatus("unverified");
+      toast.error("Verification email failed", formatApiError(err, "Failed to send verification email."));
+    }
   }
 
   async function handleUpdateEmail(e: React.FormEvent) {
@@ -151,7 +161,7 @@ export default function SettingsPage() {
     const trimmed = newEmailInput.trim().toLowerCase();
 
     if (!trimmed) {
-      setEmailModalError("Please enter an email address.");
+      setEmailModalError("Please enter a new email address.");
       return;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -163,32 +173,28 @@ export default function SettingsPage() {
       setEmailModalError("New email must be different from current email.");
       return;
     }
+    if (!emailPasswordInput) {
+      setEmailModalError("Please enter your current password to verify identity.");
+      return;
+    }
 
     setIsSavingEmail(true);
     setEmailModalError(null);
     try {
-      const updated = await api<UserSettingsResponse>("/settings/profile", {
-        method: "PATCH",
+      await api<{ success: boolean; message: string }>("/auth/email-change/request", {
+        method: "POST",
         body: JSON.stringify({
-          name: name.trim(),
-          email: trimmed,
-          username: username.trim(),
-          timezone,
-          avatarUrl: avatarUrl.trim() || null,
+          newEmail: trimmed,
+          currentPassword: emailPasswordInput,
         }),
       });
-      setSettings(updated);
-      setEmail(updated.profile.email);
       setIsEmailModalOpen(false);
-      toast.success("Email address updated", `Your account email was changed to ${trimmed}.`);
-
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent("sched_user_updated", { detail: updated.profile })
-        );
-      }
+      toast.success(
+        "Verification email sent",
+        `We sent a confirmation link to ${trimmed}. Your email address will update once confirmed.`
+      );
     } catch (err) {
-      const msg = formatApiError(err, "Failed to update email.");
+      const msg = formatApiError(err, "Failed to request email change.");
       setEmailModalError(msg);
     } finally {
       setIsSavingEmail(false);
@@ -539,7 +545,12 @@ export default function SettingsPage() {
                 <label className="text-xs font-semibold text-text-primary">
                   Email Address
                 </label>
-                {verificationStatus === "sent" ? (
+                {emailVerified ? (
+                  <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Verified
+                  </span>
+                ) : verificationStatus === "sent" ? (
                   <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full">
                     <CheckCircle2 className="h-3 w-3" />
                     Verification Sent
@@ -565,7 +576,7 @@ export default function SettingsPage() {
                   <Pencil className="h-3.5 w-3.5 text-brand" />
                   <span>Change</span>
                 </button>
-                {verificationStatus === "unverified" && (
+                {!emailVerified && verificationStatus === "unverified" && (
                   <button
                     type="button"
                     onClick={handleVerifyEmail}
@@ -574,7 +585,7 @@ export default function SettingsPage() {
                     Verify Email
                   </button>
                 )}
-                {verificationStatus === "sending" && (
+                {!emailVerified && verificationStatus === "sending" && (
                   <button
                     type="button"
                     disabled
@@ -584,7 +595,7 @@ export default function SettingsPage() {
                     Sending…
                   </button>
                 )}
-                {verificationStatus === "sent" && (
+                {!emailVerified && verificationStatus === "sent" && (
                   <button
                     type="button"
                     onClick={handleVerifyEmail}
@@ -595,7 +606,7 @@ export default function SettingsPage() {
                   </button>
                 )}
               </div>
-              {verificationStatus === "sent" && (
+              {!emailVerified && verificationStatus === "sent" && (
                 <p className="text-[11px] text-text-muted mt-1">
                   We sent a confirmation link to <span className="font-mono font-medium text-text-sub">{email}</span>. Click the link to complete verification.
                 </p>
@@ -931,6 +942,27 @@ export default function SettingsPage() {
                     }}
                     placeholder="Enter new email address"
                     autoFocus
+                    required
+                    className="w-full rounded-xl border border-border-subtle bg-surface pl-9 pr-3.5 py-2 text-xs text-text-primary placeholder:text-text-sub/50 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none transition-shadow"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="emailPasswordInput" className="text-xs font-semibold text-text-primary">
+                  Current Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-sub pointer-events-none" />
+                  <input
+                    id="emailPasswordInput"
+                    type="password"
+                    value={emailPasswordInput}
+                    onChange={(e) => {
+                      setEmailPasswordInput(e.target.value);
+                      if (emailModalError) setEmailModalError(null);
+                    }}
+                    placeholder="Confirm current password"
                     required
                     className="w-full rounded-xl border border-border-subtle bg-surface pl-9 pr-3.5 py-2 text-xs text-text-primary placeholder:text-text-sub/50 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none transition-shadow"
                   />
