@@ -20,18 +20,16 @@ export class SmtpEmailProvider implements EmailProvider {
 
     this.fromAddress = this.config.get<string>("EMAIL_FROM", "Sched Notifications <no-reply@sched.com>");
 
-    const smtpConfig: SMTPTransport.Options & { family?: number } = {
+    this.transporter = nodemailer.createTransport({
       host,
       port,
       secure,
       auth: user && pass ? { user, pass } : undefined,
-      family: 4, // Force IPv4 resolution to prevent ENETUNREACH errors on cloud hosts like Render
-      connectionTimeout: 10000, // 10 seconds connection timeout
-      greetingTimeout: 10000, // 10 seconds greeting timeout
-      socketTimeout: 15000, // 15 seconds socket inactivity timeout
-    };
-
-    this.transporter = nodemailer.createTransport(smtpConfig as SMTPTransport.Options);
+      family: 4, // Force IPv4 to prevent ENETUNREACH on IPv6-unreachable networks/hosts
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
+    } as SMTPTransport.Options);
   }
 
   async send(options: SendEmailOptions): Promise<EmailSendResult> {
