@@ -46,7 +46,7 @@ export class BookingsService {
     private readonly tokenService: BookingTokenService,
     private readonly googleCalendar: GoogleCalendarService,
     private readonly zoomService: ZoomService
-  ) {}
+  ) { }
 
   async createBooking(
     username: string,
@@ -830,9 +830,8 @@ export class BookingsService {
       startTime: new Date(booking.startTime),
       endTime: new Date(booking.endTime),
       summary: `${booking.eventType.title} with ${booking.host.name}`,
-      description: `Meeting between ${booking.host.name} and ${booking.attendeeName}\n\nNotes: ${
-        booking.attendeeNotes || "None"
-      }`,
+      description: `Meeting between ${booking.host.name} and ${booking.attendeeName}\n\nNotes: ${booking.attendeeNotes || "None"
+        }`,
       status: booking.status === "CANCELLED" ? "CANCELLED" : "CONFIRMED",
       locationType: booking.locationType,
       locationData: booking.locationData as Record<string, unknown> | null,
