@@ -54,7 +54,7 @@ export class AuthService {
     );
 
     if (process.env.NODE_ENV !== "test") {
-      void this.notifications.sendEmailVerificationEmail(
+      await this.notifications.sendEmailVerificationEmail(
         {
           id: user.id,
           name: user.name,
@@ -104,7 +104,7 @@ export class AuthService {
 
     // Send Professional Login Security Alert Email
     if (process.env.NODE_ENV !== "test") {
-      void this.notifications.sendLoginSecurityAlertEmail(
+      await this.notifications.sendLoginSecurityAlertEmail(
         {
           id: user.id,
           name: user.name,
@@ -155,7 +155,7 @@ export class AuthService {
     );
 
     if (process.env.NODE_ENV !== "test") {
-      void this.notifications.sendEmailVerificationEmail(
+      await this.notifications.sendEmailVerificationEmail(
         {
           id: user.id,
           name: user.name,
@@ -200,7 +200,7 @@ export class AuthService {
       );
 
       if (process.env.NODE_ENV !== "test") {
-        void this.notifications.sendPasswordResetEmail(
+        await this.notifications.sendPasswordResetEmail(
           {
             id: user.id,
             name: user.name,
@@ -271,7 +271,7 @@ export class AuthService {
     );
 
     if (process.env.NODE_ENV !== "test") {
-      void this.notifications.sendEmailChangeConfirmationEmail(
+      await this.notifications.sendEmailChangeConfirmationEmail(
         {
           id: user.id,
           name: user.name,
