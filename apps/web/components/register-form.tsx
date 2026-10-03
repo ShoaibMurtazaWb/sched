@@ -3,7 +3,7 @@
 import { registerBodySchema } from "@sched/api-contract";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowRight, AtSign, Check, CheckCircle2, Eye, EyeOff, Globe, Lock, Mail, User } from "lucide-react";
+import { ArrowRight, AtSign, Check, Eye, EyeOff, Globe, Lock, Mail, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -56,7 +56,7 @@ function checkPasswordStrength(password: string) {
   const hasMinLength = password.length >= 8;
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
-  const hasNumberOrSymbol = /[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+  const hasNumberOrSymbol = /[0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/]/.test(password);
 
   const criteria = [
     { id: "length", label: "At least 8 characters", met: hasMinLength },
