@@ -110,6 +110,75 @@ describe("event types HTTP", () => {
     expect(activeAfterRestore.body).toHaveLength(1);
   });
 
+  it("duplicates event types with unique slugs, custom questions, and different locations", async () => {
+    const { cookies } = await register(uniqueLabel("duphost"));
+
+    // 1. Create a normal event type with custom questions and IN_PERSON location
+    const created = await request(app.getHttpServer())
+      .post("/api/v1/event-types")
+      .set("Cookie", cookies)
+      .send({
+        title: "Strategy Session",
+        slug: "strategy-session",
+        description: "Deep dive strategy session",
+        durationMinutes: 45,
+        location: {
+          type: "IN_PERSON",
+          data: { address: "100 Market St, San Francisco, CA" },
+        },
+        customQuestions: [
+          {
+            type: "TEXT",
+            label: "What is your goals?",
+            required: true,
+          },
+          {
+            type: "SELECT",
+            label: "Team Size",
+            required: false,
+            options: [{ label: "1-10" }, { label: "10-50" }],
+          },
+        ],
+      });
+    expect(created.status).toBe(201);
+    const originalId = created.body.id;
+
+    // 2. Duplicate normal event type
+    const dup1 = await request(app.getHttpServer())
+      .post(`/api/v1/event-types/${originalId}/duplicate`)
+      .set("Cookie", cookies);
+    expect(dup1.status).toBe(201);
+    expect(dup1.body.title).toBe("Strategy Session (Copy)");
+    expect(dup1.body.slug).toBe("strategy-session-copy");
+    expect(dup1.body.durationMinutes).toBe(45);
+    expect(dup1.body.location.type).toBe("IN_PERSON");
+    expect(dup1.body.location.data.address).toBe("100 Market St, San Francisco, CA");
+    expect(dup1.body.customQuestions).toHaveLength(2);
+    expect(dup1.body.customQuestions[0].label).toBe("What is your goals?");
+
+    // 3. Duplicate a second time -> check unique slug counter (-1)
+    const dup2 = await request(app.getHttpServer())
+      .post(`/api/v1/event-types/${originalId}/duplicate`)
+      .set("Cookie", cookies);
+    expect(dup2.status).toBe(201);
+    expect(dup2.body.title).toBe("Strategy Session (Copy)");
+    expect(dup2.body.slug).toBe("strategy-session-copy-1");
+
+    // 4. Duplicate a third time -> check unique slug counter (-2)
+    const dup3 = await request(app.getHttpServer())
+      .post(`/api/v1/event-types/${originalId}/duplicate`)
+      .set("Cookie", cookies);
+    expect(dup3.status).toBe(201);
+    expect(dup3.body.slug).toBe("strategy-session-copy-2");
+
+    // 5. Verify all duplicated events appear in list
+    const listRes = await request(app.getHttpServer())
+      .get("/api/v1/event-types")
+      .set("Cookie", cookies);
+    expect(listRes.status).toBe(200);
+    expect(listRes.body).toHaveLength(4); // original + 3 copies
+  });
+
   it("returns 404 when another user guesses an id", async () => {
     const owner = await register(uniqueLabel("owner"));
     const stranger = await register(uniqueLabel("other"));
