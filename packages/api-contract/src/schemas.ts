@@ -308,7 +308,7 @@ export const eventTypeIdParamSchema = z.object({
 });
 
 export const listEventTypesQuerySchema = z.object({
-  status: z.enum(["active", "archived"]).default("active"),
+  status: z.enum(["active", "archived", "all"]).default("active"),
 });
 
 export const publicEventTypeParamsSchema = z.object({
