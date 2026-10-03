@@ -270,10 +270,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--bg-canvas)]">
-        <div className="flex flex-col items-center gap-3 text-sm text-[var(--text-secondary)] font-medium">
-          <Spinner size="default" />
-          <span>Loading workspace…</span>
-        </div>
+        <Logo className="h-10 w-10 animate-pulse shrink-0" />
       </div>
     );
   }

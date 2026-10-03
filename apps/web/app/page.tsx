@@ -164,10 +164,7 @@ export default function HomePage() {
   if (isCheckingAuth) {
     return (
       <div className="min-h-screen bg-[var(--bg-canvas)] flex items-center justify-center">
-        <div className="flex items-center gap-2.5 text-xs text-[var(--text-muted)] font-medium">
-          <Logo className="h-6 w-6 animate-pulse" />
-          <span>Loading Sched…</span>
-        </div>
+        <Logo className="h-10 w-10 animate-pulse shrink-0" />
       </div>
     );
   }

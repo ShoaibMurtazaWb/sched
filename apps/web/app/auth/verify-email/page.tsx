@@ -6,7 +6,6 @@ import { Suspense, useEffect, useState } from "react";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
 import { Logo } from "@/components/logo";
 import { api } from "@/lib/api";
 import { formatApiError } from "@/lib/api-error";
@@ -47,12 +46,8 @@ function VerifyEmailContent() {
 
   if (status === "loading") {
     return (
-      <div className="flex flex-col items-center justify-center space-y-4 py-6 text-center">
-        <Spinner size="default" />
-        <div>
-          <h2 className="text-base font-semibold text-[var(--text-primary)]">Verifying email address…</h2>
-          <p className="text-xs text-[var(--text-muted)] mt-1">Please wait while we confirm your security token.</p>
-        </div>
+      <div className="flex justify-center p-8">
+        <Logo className="h-8 w-8 animate-pulse shrink-0" />
       </div>
     );
   }
@@ -119,7 +114,7 @@ export default function VerifyEmailPage() {
         </Link>
         <Suspense fallback={
           <div className="flex justify-center p-8">
-            <Spinner size="default" />
+            <Logo className="h-8 w-8 animate-pulse shrink-0" />
           </div>
         }>
           <VerifyEmailContent />
