@@ -58,6 +58,15 @@ export class EventTypesController {
     return this.eventTypes.update(userId, params.id, body);
   }
 
+  @Post(":id/duplicate")
+  @ApiOperation({ summary: "Duplicate an existing event type" })
+  duplicate(
+    @CurrentUserId() userId: string,
+    @Param(zodPipe(eventTypeIdParamSchema)) params: { id: string },
+  ) {
+    return this.eventTypes.duplicate(userId, params.id);
+  }
+
   @Post(":id/archive")
   @ApiOperation({ summary: "Archive an owned event type (idempotent)" })
   archive(

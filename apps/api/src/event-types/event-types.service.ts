@@ -20,7 +20,11 @@ export class EventTypesService {
     const rows = await this.prisma.eventType.findMany({
       where: {
         userId,
-        archivedAt: query.status === "archived" ? { not: null } : null,
+        ...(query.status === "archived"
+          ? { archivedAt: { not: null } }
+          : query.status === "active"
+            ? { archivedAt: null }
+            : {}),
       },
       include: {
         _count: {
@@ -88,6 +92,55 @@ export class EventTypesService {
         throw error;
       });
     }
+  }
+
+  async duplicate(userId: string, id: string): Promise<OwnerEventTypeResponse> {
+    const existing = await this.findOwnedOrThrow(userId, id);
+    const title = `${existing.title} (Copy)`;
+
+    const baseSlug = `${existing.slug}-copy`;
+    let uniqueSlug = baseSlug;
+    let counter = 1;
+
+    while (counter <= 100) {
+      const conflict = await this.prisma.eventType.findUnique({
+        where: { userId_slug: { userId, slug: uniqueSlug } },
+      });
+      if (!conflict) break;
+      uniqueSlug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    const row = await this.prisma.eventType.create({
+      data: {
+        userId,
+        title,
+        slug: uniqueSlug,
+        description: existing.description,
+        durationMinutes: existing.durationMinutes,
+        beforeBufferMinutes: existing.beforeBufferMinutes,
+        afterBufferMinutes: existing.afterBufferMinutes,
+        minimumNoticeMinutes: existing.minimumNoticeMinutes,
+        locationType: existing.locationType ?? null,
+        locationData: (existing.locationData ?? {}) as Prisma.InputJsonValue,
+        customQuestions: existing.customQuestions as Prisma.InputJsonValue,
+      },
+      include: {
+        _count: {
+          select: { bookings: true },
+        },
+      },
+    });
+
+    await this.audit.log({
+      userId,
+      action: "EVENT_TYPE_DUPLICATED",
+      entityType: "EventType",
+      entityId: row.id,
+      metadata: { originalId: existing.id, title: row.title, slug: row.slug },
+    });
+
+    return toOwnerEventType(row);
   }
 
   async getOwned(userId: string, id: string): Promise<OwnerEventTypeResponse> {
