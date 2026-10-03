@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Trash2,
   Calendar,
+  CopyPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -87,16 +88,60 @@ function EventTypeListContent() {
   async function loadData() {
     setIsLoading(true);
     try {
-      const [me, activeList] = await Promise.all([
+      const [me, allList] = await Promise.all([
         api<CurrentUser>("/auth/me"),
-        api<EventType[]>("/event-types?status=active"),
+        api<EventType[]>("/event-types"),
       ]);
       setUser(me);
-      setItems(activeList);
+      setItems(allList);
     } catch {
       toast.error("Could not load event types", "Please try refreshing the page.");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handleDuplicate(id: string) {
+    try {
+      const duplicated = await api<EventType>(`/event-types/${id}/duplicate`, { method: "POST" });
+      toast.success("Event type duplicated", `Created "${duplicated.title}".`);
+      await loadData();
+    } catch (caught) {
+      if (caught instanceof ApiError) {
+        toast.error("Failed to duplicate event type", caught.message);
+      } else {
+        toast.error("Could not duplicate event type");
+      }
+    }
+  }
+
+  async function handleToggleActive(item: EventType) {
+    const isCurrentlyActive = !item.archivedAt;
+    const endpoint = isCurrentlyActive ? `/event-types/${item.id}/archive` : `/event-types/${item.id}/unarchive`;
+    const actionLabel = isCurrentlyActive ? "disabled" : "enabled";
+
+    // Optimistic UI update
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === item.id ? { ...i, archivedAt: isCurrentlyActive ? new Date().toISOString() : null } : i
+      )
+    );
+
+    try {
+      await api(endpoint, { method: "POST" });
+      toast.success(`Event type ${actionLabel}`, `"${item.title}" is now ${actionLabel}.`);
+    } catch (caught) {
+      // Revert optimistic update
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === item.id ? { ...i, archivedAt: item.archivedAt } : i
+        )
+      );
+      if (caught instanceof ApiError) {
+        toast.error(`Could not ${isCurrentlyActive ? "disable" : "enable"} event type`, caught.message);
+      } else {
+        toast.error("Failed to update status");
+      }
     }
   }
 
@@ -157,16 +202,25 @@ function EventTypeListContent() {
     }, 2000);
   }
 
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived">("all");
+
   const filteredItems = useMemo(() => {
-    if (!searchQuery.trim()) return items;
+    let result = items;
+    if (statusFilter === "active") {
+      result = result.filter((item) => !item.archivedAt);
+    } else if (statusFilter === "archived") {
+      result = result.filter((item) => !!item.archivedAt);
+    }
+
+    if (!searchQuery.trim()) return result;
     const query = searchQuery.toLowerCase();
-    return items.filter(
+    return result.filter(
       (item) =>
         item.title.toLowerCase().includes(query) ||
         item.slug.toLowerCase().includes(query) ||
         item.description.toLowerCase().includes(query)
     );
-  }, [items, searchQuery]);
+  }, [items, statusFilter, searchQuery]);
 
   return (
     <div className="flex w-full h-full min-h-0 items-stretch overflow-hidden px-2 sm:px-3 lg:px-4 pb-2 sm:pb-3 lg:pb-4 pt-0">
@@ -206,12 +260,39 @@ function EventTypeListContent() {
 
           {/* Subtabs Bar */}
           <div className="border-b border-border-subtle">
-            <div className="flex items-center text-xs font-semibold whitespace-nowrap">
+            <div className="flex items-center gap-6 text-xs font-semibold whitespace-nowrap">
               <button
                 type="button"
-                className="pb-3 border-b-2 border-brand text-brand font-bold shrink-0 transition-colors"
+                onClick={() => setStatusFilter("all")}
+                className={`pb-3 border-b-2 font-bold shrink-0 transition-colors cursor-pointer ${
+                  statusFilter === "all"
+                    ? "border-brand text-brand"
+                    : "border-transparent text-text-muted hover:text-text-main"
+                }`}
               >
-                Event types
+                All ({items.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("active")}
+                className={`pb-3 border-b-2 font-bold shrink-0 transition-colors cursor-pointer ${
+                  statusFilter === "active"
+                    ? "border-brand text-brand"
+                    : "border-transparent text-text-muted hover:text-text-main"
+                }`}
+              >
+                Active ({items.filter((i) => !i.archivedAt).length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("archived")}
+                className={`pb-3 border-b-2 font-bold shrink-0 transition-colors cursor-pointer ${
+                  statusFilter === "archived"
+                    ? "border-brand text-brand"
+                    : "border-transparent text-text-muted hover:text-text-main"
+                }`}
+              >
+                Archived ({items.filter((i) => !!i.archivedAt).length})
               </button>
             </div>
           </div>
@@ -285,9 +366,20 @@ function EventTypeListContent() {
                   {/* Card Header & Meta Info */}
                   <div className="flex items-start justify-between gap-3 min-w-0 flex-1">
                     <div className="min-w-0 flex-1">
-                      <span className="text-base font-bold text-text-main group-hover:text-brand transition-colors text-left inline-block">
-                        {item.title}
-                      </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-base font-bold text-text-main group-hover:text-brand transition-colors text-left inline-block">
+                          {item.title}
+                        </span>
+                        {item.archivedAt ? (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 select-none">
+                            Disabled
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 select-none">
+                            Active
+                          </span>
+                        )}
+                      </div>
 
                       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-sub font-medium">
                         <span>{item.durationMinutes} min</span>
@@ -305,6 +397,16 @@ function EventTypeListContent() {
                       className="flex items-center gap-1 md:hidden shrink-0"
                       onClick={(e) => e.stopPropagation()}
                     >
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => void handleDuplicate(item.id)}
+                        className="h-8 w-8 rounded-full text-text-muted hover:text-text-main hover:bg-surface-subtle"
+                        title="Duplicate event type"
+                      >
+                        <CopyPlus className="h-4 w-4" />
+                      </Button>
                       {user && (
                         <Button
                           asChild
@@ -333,9 +435,29 @@ function EventTypeListContent() {
 
                   {/* Card Actions */}
                   <div
-                    className="flex items-center gap-2 w-full md:w-auto shrink-0 pt-2 md:pt-0 border-t border-border-subtle md:border-t-0 flex-wrap"
+                    className="flex items-center gap-2.5 w-full md:w-auto shrink-0 pt-2 md:pt-0 border-t border-border-subtle md:border-t-0 flex-wrap"
                     onClick={(e) => e.stopPropagation()}
                   >
+                    {/* Enable / Disable Toggle Switch */}
+                    <div className="flex items-center gap-2 mr-1">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={!item.archivedAt}
+                        onClick={() => void handleToggleActive(item)}
+                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          !item.archivedAt ? "bg-brand" : "bg-neutral-300 dark:bg-neutral-700"
+                        }`}
+                        title={!item.archivedAt ? "Disable event type" : "Enable event type"}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                            !item.archivedAt ? "translate-x-4" : "translate-x-0"
+                          }`}
+                        />
+                      </button>
+                    </div>
+
                     {/* Copy Link Pill Button */}
                     <Button
                       type="button"
@@ -371,6 +493,18 @@ function EventTypeListContent() {
 
                     {/* Desktop Action Icons */}
                     <div className="hidden md:flex items-center gap-1">
+                      <Tooltip content="Duplicate event type">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => void handleDuplicate(item.id)}
+                          className="h-8 w-8 rounded-full text-text-muted hover:text-text-main hover:bg-surface-subtle cursor-pointer"
+                        >
+                          <CopyPlus className="h-3.5 w-3.5" />
+                        </Button>
+                      </Tooltip>
+
                       {user && (
                         <Tooltip content="Preview booking page">
                           <Button
