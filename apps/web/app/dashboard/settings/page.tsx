@@ -45,6 +45,7 @@ export default function SettingsPage() {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [newEmailInput, setNewEmailInput] = useState("");
   const [emailPasswordInput, setEmailPasswordInput] = useState("");
+  const [showEmailPassword, setShowEmailPassword] = useState(false);
   const [emailModalError, setEmailModalError] = useState<string | null>(null);
   const [isSavingEmail, setIsSavingEmail] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
@@ -956,7 +957,7 @@ export default function SettingsPage() {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-sub pointer-events-none" />
                   <input
                     id="emailPasswordInput"
-                    type="password"
+                    type={showEmailPassword ? "text" : "password"}
                     value={emailPasswordInput}
                     onChange={(e) => {
                       setEmailPasswordInput(e.target.value);
@@ -964,8 +965,17 @@ export default function SettingsPage() {
                     }}
                     placeholder="Confirm current password"
                     required
-                    className="w-full rounded-xl border border-border-subtle bg-surface pl-9 pr-3.5 py-2 text-xs text-text-primary placeholder:text-text-sub/50 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none transition-shadow"
+                    className="w-full rounded-xl border border-border-subtle bg-surface pl-9 pr-9 py-2 text-xs text-text-primary placeholder:text-text-sub/50 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none transition-shadow"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowEmailPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-sub hover:text-text-primary transition-colors cursor-pointer"
+                    tabIndex={-1}
+                    aria-label={showEmailPassword ? "Hide password" : "Show password"}
+                  >
+                    {showEmailPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
                 {emailModalError && (
                   <p className="text-[11px] font-medium text-rose-600 flex items-center gap-1 mt-1">

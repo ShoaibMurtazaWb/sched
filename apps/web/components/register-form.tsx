@@ -3,7 +3,7 @@
 import { registerBodySchema } from "@sched/api-contract";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowRight, Globe, Lock, Mail, User, AtSign } from "lucide-react";
+import { ArrowRight, AtSign, Check, CheckCircle2, Eye, EyeOff, Globe, Lock, Mail, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { Logo } from "@/components/logo";
 import { api } from "@/lib/api";
 import { fieldErrors, formatApiError } from "@/lib/api-error";
-
 const FALLBACK_TIMEZONES = [
   "UTC",
   "Africa/Cairo",
@@ -53,17 +52,70 @@ const FALLBACK_TIMEZONES = [
   "Pacific/Honolulu",
 ];
 
+function checkPasswordStrength(password: string) {
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumberOrSymbol = /[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+
+  const criteria = [
+    { id: "length", label: "At least 8 characters", met: hasMinLength },
+    { id: "uppercase", label: "At least 1 uppercase letter", met: hasUppercase },
+    { id: "lowercase", label: "At least 1 lowercase letter", met: hasLowercase },
+    { id: "numberOrSymbol", label: "At least 1 number or symbol", met: hasNumberOrSymbol },
+  ];
+
+  const metCount = criteria.filter((c) => c.met).length;
+
+  let label = "Weak";
+  let colorClass = "text-rose-500";
+  let barColorClass = "bg-rose-500";
+  let percent = 25;
+
+  if (metCount === 0) {
+    percent = 0;
+    label = "Very Weak";
+    colorClass = "text-[var(--text-muted)]";
+    barColorClass = "bg-neutral-300 dark:bg-neutral-700";
+  } else if (metCount === 1) {
+    percent = 25;
+    label = "Weak";
+    colorClass = "text-rose-500";
+    barColorClass = "bg-rose-500";
+  } else if (metCount === 2) {
+    percent = 50;
+    label = "Fair";
+    colorClass = "text-amber-500";
+    barColorClass = "bg-amber-500";
+  } else if (metCount === 3) {
+    percent = 75;
+    label = "Good";
+    colorClass = "text-blue-500";
+    barColorClass = "bg-blue-500";
+  } else if (metCount === 4) {
+    percent = 100;
+    label = "Strong";
+    colorClass = "text-emerald-500";
+    barColorClass = "bg-emerald-500";
+  }
+
+  return { criteria, metCount, label, colorClass, barColorClass, percent };
+}
+
 export function RegisterForm() {
   const [timezones, setTimezones] = useState<string[]>(FALLBACK_TIMEZONES);
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [timezone, setTimezone] = useState("UTC");
   const [error, setError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [pending, setPending] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  const strength = checkPasswordStrength(password);
 
   // Check if user is already authenticated & auto-detect timezone
   useEffect(() => {
@@ -229,23 +281,87 @@ export function RegisterForm() {
           </div>
 
           {/* Password */}
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
               <Input
                 id="password"
                 name="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Minimum 8 characters"
+                placeholder="Create a strong password"
                 required
-                className="pl-9"
+                className="pl-9 pr-9"
                 aria-invalid={Boolean(fields.password)}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors focus:outline-none cursor-pointer"
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
+
+            {/* Password Validation & Strength Meter */}
+            <div
+              className={`grid transition-all duration-300 ease-out origin-top ${
+                password.length > 0
+                  ? "grid-rows-[1fr] opacity-100 translate-y-0 mt-2"
+                  : "grid-rows-[0fr] opacity-0 -translate-y-2 pointer-events-none mt-0 overflow-hidden"
+              }`}
+            >
+              <div className="overflow-hidden">
+                <div className="space-y-2.5 rounded-lg bg-[var(--bg-canvas)]/50 p-3 border border-[var(--border-subtle)] shadow-2xs">
+                  {/* Visual Progress Bar */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px] font-medium">
+                      <span className="text-[var(--text-muted)]">Password strength</span>
+                      <span className={`font-semibold transition-colors duration-200 ${strength.colorClass}`}>{strength.label}</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-[var(--border-subtle)] overflow-hidden flex gap-1">
+                      <div
+                        className={`h-full transition-all duration-300 ${strength.barColorClass}`}
+                        style={{ width: `${strength.percent}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Requirement Checklist */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
+                    {strength.criteria.map((item) => (
+                      <div
+                        key={item.id}
+                        className={`flex items-center gap-1.5 transition-colors duration-200 ${
+                          item.met ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-[var(--text-muted)]"
+                        }`}
+                      >
+                        <div
+                          className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full transition-colors duration-200 ${
+                            item.met
+                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                              : "bg-[var(--border-subtle)] text-[var(--text-muted)]"
+                          }`}
+                        >
+                          {item.met ? (
+                            <Check className="h-2.5 w-2.5 stroke-[3]" />
+                          ) : (
+                            <div className="h-1 w-1 rounded-full bg-[var(--text-muted)]" />
+                          )}
+                        </div>
+                        <span>{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {fields.password && <p className="text-xs text-[var(--status-danger-text)] font-medium">{fields.password}</p>}
           </div>
 
