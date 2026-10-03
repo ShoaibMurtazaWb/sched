@@ -47,7 +47,7 @@ function VerifyEmailContent() {
   if (status === "loading") {
     return (
       <div className="flex justify-center p-8">
-        <Logo className="h-8 w-8 animate-pulse shrink-0" />
+        <Logo className="h-8 w-8 animate-logo-pulse shrink-0" />
       </div>
     );
   }
@@ -114,7 +114,7 @@ export default function VerifyEmailPage() {
         </Link>
         <Suspense fallback={
           <div className="flex justify-center p-8">
-            <Logo className="h-8 w-8 animate-pulse shrink-0" />
+            <Logo className="h-8 w-8 animate-logo-pulse shrink-0" />
           </div>
         }>
           <VerifyEmailContent />

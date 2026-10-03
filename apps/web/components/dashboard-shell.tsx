@@ -270,7 +270,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--bg-canvas)]">
-        <Logo className="h-10 w-10 animate-pulse shrink-0" />
+        <Logo className="h-10 w-10 animate-logo-pulse shrink-0" />
       </div>
     );
   }

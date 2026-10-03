@@ -149,6 +149,19 @@ body {
   }
 }
 
+@keyframes logo-pulse-scale {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.18);
+  }
+}
+
+.animate-logo-pulse {
+  animation: logo-pulse-scale 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 /* Dark mode comprehensive element and utility adaptations */
 .dark input,
 .dark select,

@@ -164,7 +164,7 @@ export default function HomePage() {
   if (isCheckingAuth) {
     return (
       <div className="min-h-screen bg-[var(--bg-canvas)] flex items-center justify-center">
-        <Logo className="h-10 w-10 animate-pulse shrink-0" />
+        <Logo className="h-10 w-10 animate-logo-pulse shrink-0" />
       </div>
     );
   }
